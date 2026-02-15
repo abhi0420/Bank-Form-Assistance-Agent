@@ -1,0 +1,69 @@
+[   
+    {
+        "field": "Date",
+        "start": [160, 67],
+        "end": [295, 67],
+        "value": "16022026",
+        "spacing": 18.5,
+        "font_size": 10
+    },
+    {
+        "field": "Account Type",
+        "start": [22, 91],
+        "end": [32, 91],
+        "value": "X",
+        "type": "checkbox",
+        "font_size": 12,
+        "bold": true
+    },
+    {
+        "field": "Account Number",
+        "start": [120, 112],
+        "end": [298, 112],
+        "value": "2544631",
+        "spacing": 18.5,
+        "font_size": 10
+    },
+    {
+        "field": "Credit To",
+        "start": [170, 138],
+        "end": [298, 138],
+        "value": "John Doe",
+        "font_size": 10
+    },
+    {
+        "field": "Amount in Words",
+        "start": [100, 152],
+        "end": [250, 152],  
+        "value": "Five Thousand Only",
+        "font_size": 9
+    },
+    {
+        "field": "Cash/DD/Cheque",
+        "start": [150, 165],
+        "end": [200, 165],
+        "value": "3468623",
+        "font_size": 9
+    },
+    {
+        "field": "Date_2",
+        "start": [40, 177],
+        "end": [80, 177],
+        "value": "16-02-2026",
+        "font_size": 9
+    },
+    {
+        "field": "IFSC Code",
+        "start": [140, 189],
+        "end": [210, 189],
+        "value": "SBIN0001234",
+        "font_size": 9
+    },
+    {
+        "field": "Amount",
+        "start": [240, 182],
+        "end": [280, 182],
+        "value": "5000",
+        "font_size": 10
+    }
+]

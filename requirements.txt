@@ -1,3 +1,6 @@
 PyMuPDF>=1.23.0
 PyPDF2>=3.0.0
 reportlab>=4.0.0
+sounddevice>=0.4.0
+torch>=2.0.0
+transformers>=4.36.0

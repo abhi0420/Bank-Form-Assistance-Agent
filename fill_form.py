@@ -67,11 +67,19 @@ def create_text_overlay(fields, page_width, page_height):
     return packet
 
 
-def fill_pdf_form(input_pdf_path, output_pdf_path, json_path):
+def fill_pdf_form(input_pdf_path, output_pdf_path, json_path, form_name="Pay-in-Slip"):
     """Fill the PDF form with values from the JSON file."""
     # Load field coordinates and values
-    fields = load_field_coordinates(json_path)
-    
+    forms = load_field_coordinates(json_path)
+
+    for form in forms:
+        if form.keys() and form_name in form:
+            fields = form[form_name]
+            print(f"Found fields for form '{form_name}': {fields}")
+            break
+    else:
+        print(f"No fields found for form '{form_name}'")
+        return
     # Read the original PDF
     reader = PdfReader(input_pdf_path)
     writer = PdfWriter()
@@ -107,4 +115,4 @@ if __name__ == "__main__":
     output_pdf = "forms/Pay-in-Slip_filled.pdf"
     json_file = "field_coordinates.json"
     
-    fill_pdf_form(input_pdf, output_pdf, json_file)
+    fill_pdf_form(input_pdf, output_pdf, json_file, form_name="Pay-in-Slip")

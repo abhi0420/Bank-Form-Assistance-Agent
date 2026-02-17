@@ -3,7 +3,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from PyPDF2 import PdfReader, PdfWriter
 import io
-
+from voice_input import record_audio, transcribe
 
 def load_field_coordinates(json_path):
     """Load field coordinates and values from JSON file."""
@@ -31,7 +31,17 @@ def create_text_overlay(fields, page_width, page_height):
         spacing = field.get("spacing")  # Optional: spacing between characters
         font_size = field.get("font_size", DEFAULT_FONT_SIZE)
         is_bold = field.get("bold", DEFAULT_BOLD)
-        field_type = field.get("type", "text")  # text, checkbox
+        field_type = field.get("type", "text") 
+
+        if value == "":
+            print("Please provide the value for the field:", field_name)
+            audio = record_audio()
+            value = transcribe(audio)  
+
+        if value == "":
+            print(f" No input detected for {field_name}, please try again.")
+            audio = record_audio()
+            value = transcribe(audio)
         
         if start and value:
             x, y = start[0], start[1]
@@ -60,7 +70,7 @@ def create_text_overlay(fields, page_width, page_height):
                 print(f"Filling '{field_name}' with '{value}' at ({x}, {pdf_y}) [size={font_size}]")
                 can.drawString(x, pdf_y, str(value))
         else:
-            print(f"Skipping field '{field_name}': start={start}, value={value}")
+            print(f"Skipping field '{field_name}' due to missing coordinates or value.")
     
     can.save()
     packet.seek(0)

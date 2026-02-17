@@ -33,21 +33,21 @@
         "field": "Credit To",
         "start": [170, 138],
         "end": [298, 138],
-        "value": "John Doe",
+        "value": "",
         "font_size": 10
     },
     {
         "field": "Amount in Words",
         "start": [100, 152],
         "end": [250, 152],  
-        "value": "Five Thousand Only",
+        "value": "",
         "font_size": 9
     },
     {
         "field": "Cash/DD/Cheque",
         "start": [150, 165],
         "end": [200, 165],
-        "value": "3468623",
+        "value": "",
         "font_size": 9
     },
     {
@@ -61,7 +61,7 @@
         "field": "IFSC Code",
         "start": [140, 189],
         "end": [210, 189],
-        "value": "SBIN0001234",
+        "value": "",
         "font_size": 9
     },
     {

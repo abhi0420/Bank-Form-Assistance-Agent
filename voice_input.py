@@ -1,3 +1,13 @@
+import warnings
+import logging
+import os
+
+# Suppress all warnings before importing anything else
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+warnings.filterwarnings("ignore")
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("transformers.generation").setLevel(logging.ERROR)
+
 import sounddevice as sd
 import numpy as np
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
@@ -6,7 +16,7 @@ import torch
 # Configuration
 MODEL_NAME = "openai/whisper-small"  # Options: whisper-tiny, whisper-base, whisper-small, whisper-medium, whisper-large
 SAMPLE_RATE = 16000  # Whisper expects 16kHz audio
-RECORDING_DURATION = 5  # seconds (reduced for faster testing)
+RECORDING_DURATION = 7  # seconds (reduced for faster testing)
 
 print(f"Loading Whisper model: {MODEL_NAME}...")
 print("(This may take a minute on first run as it downloads the model)\n")
@@ -14,6 +24,9 @@ print("(This may take a minute on first run as it downloads the model)\n")
 # Load model and processor
 processor = WhisperProcessor.from_pretrained(MODEL_NAME)
 model = WhisperForConditionalGeneration.from_pretrained(MODEL_NAME)
+
+# Fix deprecated config - set language explicitly
+model.config.forced_decoder_ids = None
 
 # Use GPU if available
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -23,8 +36,8 @@ print(f"Model loaded on: {device}")
 
 def record_audio(duration=RECORDING_DURATION, sample_rate=SAMPLE_RATE):
     """Record audio from microphone."""
-    print(f"\n🎤 Recording for {duration} seconds...")
-    print("   Speak now! (Press Ctrl+C to stop early)\n")
+    # print(f"\n🎤 Recording for {duration} seconds...")
+    # print("   Speak now! (Press Ctrl+C to stop early)\n")
     
     try:
         # Show countdown while recording
@@ -39,7 +52,7 @@ def record_audio(duration=RECORDING_DURATION, sample_rate=SAMPLE_RATE):
                 break
         
         sd.wait()  # Wait until recording is finished
-        print("   ✅ Recording complete!          ")
+        # print("   ✅ Recording complete!          ")
         
     except KeyboardInterrupt:
         sd.stop()
@@ -50,17 +63,21 @@ def record_audio(duration=RECORDING_DURATION, sample_rate=SAMPLE_RATE):
     
     # Check if audio was captured
     max_amp = np.max(np.abs(audio))
-    print(f"   📊 Audio level: {max_amp:.3f}")
+    # print(f"   📊 Audio level: {max_amp:.3f}")
     if max_amp < 0.01:
         print("   ⚠️  Warning: Very low audio level - check your microphone!")
+        return None
     
     return audio
 
 
 def transcribe(audio, sample_rate=SAMPLE_RATE):
     """Transcribe audio using Whisper."""
-    print("📝 Transcribing...")
+    # print("📝 Transcribing...")
     
+    if audio is None:
+        print("   ❌ No audio to transcribe.")
+        return ""
     # Process audio for Whisper
     input_features = processor(
         audio, 
@@ -68,9 +85,17 @@ def transcribe(audio, sample_rate=SAMPLE_RATE):
         return_tensors="pt"
     ).input_features.to(device)
     
-    # Generate transcription
+    # Create attention mask
+    attention_mask = torch.ones(input_features.shape[:2], dtype=torch.long, device=device)
+    
+    # Generate transcription with explicit language setting to avoid warnings
     with torch.no_grad():
-        predicted_ids = model.generate(input_features)
+        predicted_ids = model.generate(
+            input_features,
+            attention_mask=attention_mask,
+            language="en",
+            task="transcribe"
+        )
     
     # Decode to text
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
@@ -78,9 +103,9 @@ def transcribe(audio, sample_rate=SAMPLE_RATE):
 
 
 def main():
-    print("\n" + "="*50)
-    print("🎙️  Voice Input for Bank Form")
-    print("="*50)
+    # print("\n" + "="*50)
+    # print("🎙️  Voice Input for Bank Form")
+    # print("="*50)
     
     while True:
         input("\nPress Enter to start recording (or Ctrl+C to exit)...")
@@ -91,7 +116,7 @@ def main():
         # Transcribe
         text = transcribe(audio)
         
-        print("\n" + "-"*50)
+        # print("\n" + "-"*50)
         print("📄 Transcription:")
         print(f"   {text}")
         print("-"*50)

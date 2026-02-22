@@ -11,22 +11,27 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = "gpt-4o-mini"
 
 
-def build_system_prompt(form_fields):
+def build_system_prompt(form_fields, filled_values=None):
     """Build system prompt dynamically based on form fields."""
+    filled_values = filled_values or {}
     
     # Build field list from form_fields
     fields_list = []
     for i, field in enumerate(form_fields, 1):
         field_name = field.get("field")
+        # Skip fields that already have values (pre-filled or collected)
+        if field.get("value") or filled_values.get(field_name):
+            continue
         field_type = field.get("type", "text")
-        fields_list.append(f"{i}. {field_name} ({field_type})")
+        field_desc = field.get("description", "")
+        fields_list.append(f"{i}. {field_name} ({field_type}) - {field_desc}")
     
-    fields_str = "\n".join(fields_list)
+    fields_str = "\n".join(fields_list) if fields_list else "All fields are filled!"
     
     return f"""You are BankBuddy, a friendly assistant helping users fill a bank form.
 
 IMPORTANT: This is a conversation. You will receive:
-- The conversation history (previous messages)
+- The conversation history 
 - A [Context] block with each user message showing current form state
 
 Use BOTH the conversation history and context to understand what the user needs.
@@ -37,7 +42,9 @@ YOUR JOB:
 - Handle corrections ("no, I meant...", "change amount to...")
 - When all fields are filled, show summary and ask for confirmation
 - Remember what user said earlier in the conversation
-- If one field can be used to fill another, do so automatically without asking explicitly, but inform the user about it
+- If user provides all needed info in one go, that's great! Just confirm at once and summarize back to them. 
+- Don't ask for fields you can infer from the info you have. 
+For ex Amount in words can be inferred from amount in numbers. 
 
 FORM FIELDS NEEDED:
 {fields_str}

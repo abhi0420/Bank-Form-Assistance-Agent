@@ -1,0 +1,14 @@
+[
+    {
+        "bank": "Post Office",
+        "forms": [
+            {
+                "form_name": "Pay-in-Slip",
+                "description": "Deposit money into post office savings account",
+                "aliases": ["deposit slip", "deposit form", "pay in form"],
+                "pdf_path": "forms/Pay-in-Slip.pdf",
+                "coordinates_file": "field_coordinates.json"
+            }
+        ]
+    }
+]

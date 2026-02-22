@@ -133,31 +133,244 @@ class FormAssistant:
         return filled
 
 
+def load_available_forms(json_path="available_forms.json"):
+    """Load catalog of available forms."""
+    with open(json_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def load_form_coordinates(json_path):
+    """Load detailed form coordinates from JSON."""
+    with open(json_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def get_all_forms_flat(available_forms):
+    """Flatten the bank->forms structure for LLM detection."""
+    all_forms = []
+    for bank_entry in available_forms:
+        bank_name = bank_entry.get("bank")
+        for form in bank_entry.get("forms", []):
+            all_forms.append({
+                "bank": bank_name,
+                "form_name": form.get("form_name"),
+                "description": form.get("description", ""),
+                "aliases": form.get("aliases", []),
+                "pdf_path": form.get("pdf_path"),
+                "coordinates_file": form.get("coordinates_file")
+            })
+    return all_forms
+
+
+def build_form_finder_prompt(available_forms):
+    """Build system prompt for form detection conversation."""
+    all_forms = get_all_forms_flat(available_forms)
+    
+    form_info = []
+    for f in all_forms:
+        form_info.append({
+            "bank": f["bank"],
+            "form_name": f["form_name"],
+            "description": f["description"],
+            "aliases": f["aliases"]
+        })
+    
+    return f"""You are BankBuddy, a friendly banking assistant helping users find and fill bank forms.
+
+AVAILABLE FORMS:
+{json.dumps(form_info, indent=2)}
+
+YOUR JOB:
+- Greet the user warmly and ask what they need help with
+- Through natural conversation, understand which form they need
+- If they mention something that matches a form (or its aliases), identify it
+- If unclear, ask clarifying questions
+- If they want a form you don't have, politely explain what IS available
+- If user wants to end the conversation, say goodbye
+
+RESPOND WITH JSON ONLY:
+{{
+    "message": "Your conversational response to the user",
+    "form_name": "exact form_name from list if identified, otherwise null",
+    "bank": "bank name if form identified, otherwise null",
+    "confidence": "high/medium/low",
+    "end_conversation": true/false
+}}
+
+Set end_conversation=true ONLY if user explicitly wants to quit/exit/end.
+Set form_name only when you're confident about which form they need.
+
+Be warm, helpful, and conversational. Don't be robotic."""
+
+
+class FormFinder:
+    """Conversational assistant to help user find the right form."""
+    
+    def __init__(self, available_forms):
+        self.available_forms = available_forms
+        self.system_prompt = build_form_finder_prompt(available_forms)
+        self.conversation_history = []
+    
+    def chat(self, user_input):
+        """Send message and get response."""
+        self.conversation_history.append({
+            "role": "user",
+            "content": user_input
+        })
+        
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": self.system_prompt},
+                *self.conversation_history
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.4
+        )
+        
+        assistant_msg = response.choices[0].message.content
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": assistant_msg
+        })
+        
+        try:
+            return json.loads(assistant_msg)
+        except json.JSONDecodeError:
+            return {
+                "message": assistant_msg,
+                "form_name": None,
+                "bank": None,
+                "confidence": "low",
+                "end_conversation": False
+            }
+    
+    def get_greeting(self):
+        """Get initial greeting from assistant."""
+        # Prime the conversation with a greeting request
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": "[System: Generate your opening greeting to the user]"}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7
+        )
+        
+        try:
+            result = json.loads(response.choices[0].message.content)
+            return result.get("message", "Hello! How can I help you today?")
+        except:
+            return "Hello! I'm BankBuddy. How can I help you with your banking forms today?"
+
+
+def get_form_details(available_forms, form_name, bank_name=None):
+    """Get form details including coordinates file path."""
+    for bank_entry in available_forms:
+        if bank_name and bank_entry.get("bank") != bank_name:
+            continue
+        for form in bank_entry.get("forms", []):
+            if form.get("form_name") == form_name:
+                return {
+                    "bank": bank_entry.get("bank"),
+                    **form
+                }
+    return None
+
+
+def load_form_fields(coordinates_file, form_name):
+    """Load form fields from coordinates file."""
+    forms = load_form_coordinates(coordinates_file)
+    for form in forms:
+        if form.get("form_name") == form_name:
+            return form.get("form_fields", [])
+    return []
+
+
 # --- Main ---
 if __name__ == "__main__":
-    # Test fields (some pre-filled, some empty)
-    test_fields = [
-        {"field": "Date", "value": "", "spacing": 18.5},
-        {"field": "Account Type", "value": "X", "type": "checkbox"},
-        {"field": "Account Number", "value": "2544631", "spacing": 18.5},
-        {"field": "Credit To", "value": ""},
-        {"field": "Amount", "value": ""},
-        {"field": "Amount in Words", "value": ""},
-        {"field": "IFSC Code", "value": ""},
-    ]
-    
     print("=" * 50)
     print("🏦 BankBuddy - Form Filling Assistant")
     print("=" * 50)
-    print("Type 'quit' to exit\n")
     
-    assistant = FormAssistant(test_fields)
+    # Load catalog of available forms
+    available_forms = load_available_forms("available_forms.json")
+    all_forms = get_all_forms_flat(available_forms)
     
-    # Initial greeting
-    response = assistant.chat("Hi, I need to fill a deposit form for Post Office. Can you help me?")
-    print(f"🤖 BankBuddy: {response['message']}\n")
+    print(f"\n📋 Available forms:")
+    for f in all_forms:
+        print(f"   • {f['form_name']} ({f['bank']})")
+    print()
     
-    # Chat loop (Whats this for ?)
+    # Initialize form finder assistant
+    form_finder = FormFinder(available_forms)
+    
+    # Get and show greeting
+    greeting = form_finder.get_greeting()
+    print(f"🤖 BankBuddy: {greeting}\n")
+    
+    # Phase 1: Form Detection Conversation
+    form_name = None
+    bank_name = None
+    
+    while True:
+        user_input = input("👤 You: ").strip()
+        
+        if not user_input:
+            continue
+        
+        if user_input.lower() in ['quit', 'exit', 'q']:
+            print("\n🤖 BankBuddy: Goodbye! Have a great day! 👋")
+            exit()
+        
+        response = form_finder.chat(user_input)
+        print(f"\n🤖 BankBuddy: {response.get('message', '')}\n")
+        
+        # Check if user wants to end
+        if response.get("end_conversation"):
+            print("👋 Goodbye!")
+            exit()
+        
+        # Check if form was identified
+        if response.get("form_name") and response.get("confidence") in ["high", "medium"]:
+            form_name = response.get("form_name")
+            bank_name = response.get("bank")
+            break
+    
+    # Phase 2: Load form and start filling
+    print(f"🔍 Great! Let's fill the {form_name} form.\n")
+    
+    # Get form details from catalog
+    form_details = get_form_details(available_forms, form_name, bank_name)
+    
+    if not form_details:
+        print(f"❌ Could not find form details for: {form_name}")
+        exit()
+    
+    # Load form fields from coordinates file
+    coordinates_file = form_details.get("coordinates_file", "field_coordinates.json")
+    form_fields = load_form_fields(coordinates_file, form_name)
+    
+    if not form_fields:
+        print(f"❌ Could not load form fields from: {coordinates_file}")
+        exit()
+    
+    pdf_path = form_details.get("pdf_path", f"forms/{form_name}.pdf")
+    
+    print(f"📄 Form: {form_name} ({bank_name})")
+    print(f"📁 PDF: {pdf_path}")
+    print("-" * 50)
+    print("Type 'quit' to exit anytime\n")
+    
+    # Initialize form filling assistant
+    assistant = FormAssistant(form_fields)
+    
+    # Get initial prompt from form assistant
+    initial_response = assistant.chat(f"I want to fill the {form_name} form. What information do you need?")
+    print(f"🤖 BankBuddy: {initial_response['message']}\n")
+    
+    # Phase 3: Form Filling Conversation
     while True:
         user_input = input("👤 You: ").strip()
         
@@ -168,9 +381,7 @@ if __name__ == "__main__":
             continue
         
         response = assistant.chat(user_input)
-        print(f"\n🤖 BankBuddy: {response['message']}")
-        
-        print()
+        print(f"\n🤖 BankBuddy: {response['message']}\n")
         
         if response.get('ready_to_generate'):
             print("=" * 50)
@@ -182,10 +393,8 @@ if __name__ == "__main__":
             from fill_form import fill_pdf_from_chatbot
             output_path = fill_pdf_from_chatbot(
                 chatbot_values=assistant.field_values,
-                json_path="field_coordinates.json",
-                form_name="Pay-in-Slip",
-                input_pdf="forms/Pay-in-Slip.pdf",
-                output_pdf="forms/Pay-in-Slip_filled.pdf"
+                json_path=coordinates_file,
+                form_name=form_name
             )
             
             if output_path:

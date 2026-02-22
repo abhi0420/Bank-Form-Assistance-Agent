@@ -72,12 +72,14 @@ def fill_pdf_form(input_pdf_path, output_pdf_path, json_path, form_name="Pay-in-
     # Load field coordinates and values
     forms = load_field_coordinates(json_path)
 
+    fields = None
     for form in forms:
-        if form.keys() and form_name in form:
-            fields = form[form_name]
+        if form.get("form_name") == form_name:
+            fields = form.get("form_fields")
             print(f"Found fields for form '{form_name}': {fields}")
             break
-    else:
+    
+    if not fields:
         print(f"No fields found for form '{form_name}'")
         return
     # Read the original PDF
@@ -111,7 +113,7 @@ def fill_pdf_form(input_pdf_path, output_pdf_path, json_path, form_name="Pay-in-
 
 
 def fill_pdf_from_chatbot(chatbot_values, json_path="field_coordinates.json", form_name="Pay-in-Slip",
-                         input_pdf="forms/Pay-in-Slip.pdf", output_pdf="forms/Pay-in-Slip_filled.pdf"):
+                         input_pdf=None, output_pdf=None):
     """
     Fill PDF using values collected from chatbot.
     
@@ -119,21 +121,29 @@ def fill_pdf_from_chatbot(chatbot_values, json_path="field_coordinates.json", fo
         chatbot_values: dict of field_name -> value from chatbot
         json_path: path to field coordinates JSON
         form_name: name of form in JSON
-        input_pdf: source PDF path
-        output_pdf: output PDF path
+        input_pdf: source PDF path (auto-detected from JSON if None)
+        output_pdf: output PDF path (auto-generated if None)
     """
     # Load field coordinates from JSON
     forms = load_field_coordinates(json_path)
     
     fields = None
+    form_data = None
     for form in forms:
-        if form_name in form:
-            fields = form[form_name]
+        if form.get("form_name") == form_name:
+            form_data = form
+            fields = form.get("form_fields")
             break
     
     if not fields:
         print(f"No fields found for form '{form_name}'")
         return None
+    
+    # Get PDF paths from JSON or use provided ones
+    if input_pdf is None:
+        input_pdf = form_data.get("pdf_path", f"forms/{form_name}.pdf")
+    if output_pdf is None:
+        output_pdf = input_pdf.replace(".pdf", "_filled.pdf")
     
     # Merge chatbot values with field coordinates
     for field in fields:

@@ -1,7 +1,10 @@
 [
     {  
-        
-    "Pay-in-Slip" :
+    "form_name": "Pay-in-Slip",
+    "bank": "Post Office", 
+    "description": "Deposit money into post office savings account",
+    "pdf_path": "forms/Pay-in-Slip.pdf",
+    "form_fields": 
     
     [   
     {

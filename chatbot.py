@@ -19,8 +19,7 @@ def build_system_prompt(form_fields):
     for i, field in enumerate(form_fields, 1):
         field_name = field.get("field")
         field_type = field.get("type", "text")
-        description = get_field_description(field_name)
-        fields_list.append(f"{i}. {field_name} ({description})")
+        fields_list.append(f"{i}. {field_name} ({field_type})")
     
     fields_str = "\n".join(fields_list)
     
@@ -38,7 +37,7 @@ YOUR JOB:
 - Handle corrections ("no, I meant...", "change amount to...")
 - When all fields are filled, show summary and ask for confirmation
 - Remember what user said earlier in the conversation
-- If one field depends on another use the logic and fill yourself, but confirm with user 
+- If one field can be used to fill another, do so automatically without asking explicitly, but inform the user about it
 
 FORM FIELDS NEEDED:
 {fields_str}
@@ -54,23 +53,6 @@ Once all fields are filled, take a confirmation from the user by showing all col
 Set ready_to_generate=true ONLY after user explicitly confirms the summary. Return the final list of values in a clean JSON format without any extra text at the end. 
 
 Be warm, patient, and helpful. Explain things simply if user is confused."""
-
-
-def get_field_description(field_name):
-    """Get description for each field."""
-    descriptions = {
-        "Date": "DDMMYYYY format",
-        "Account Number": "7-12 digits",
-        "Account Type": "SB=Savings, RD, TD, MIS, etc.",
-        "Credit To": "account holder name",
-        "Amount": "numbers only",
-        "Amount in Words": "e.g., Five Thousand Only",
-        "Cash/DD/Cheque": "cheque/DD number, optional if cash",
-        "Date_2": "date on cheque/DD if applicable",
-        "IFSC Code": "e.g., SBIN0001234"
-    }
-    return descriptions.get(field_name, "form field")
-
 
 class FormAssistant:
     # Each instance of FormAssistant has its own conversation history and field values
@@ -188,10 +170,6 @@ if __name__ == "__main__":
         response = assistant.chat(user_input)
         print(f"\n🤖 BankBuddy: {response['message']}")
         
-        if response.get('extracted_fields'):
-            print(f"   ✅ Got: {response['extracted_fields']}")
-        if response.get('missing_fields'):
-            print(f"   📋 Need: {response['missing_fields']}")
         print()
         
         if response.get('ready_to_generate'):
@@ -199,5 +177,17 @@ if __name__ == "__main__":
             print("✅ Generating PDF with:")
             for k, v in assistant.field_values.items():
                 print(f"   • {k}: {v}")
-            # Call fill_pdf_form() here
+            
+            # Generate the PDF
+            from fill_form import fill_pdf_from_chatbot
+            output_path = fill_pdf_from_chatbot(
+                chatbot_values=assistant.field_values,
+                json_path="field_coordinates.json",
+                form_name="Pay-in-Slip",
+                input_pdf="forms/Pay-in-Slip.pdf",
+                output_pdf="forms/Pay-in-Slip_filled.pdf"
+            )
+            
+            if output_path:
+                print(f"\n🎉 Form filled successfully! Check: {output_path}")
             break

@@ -3,7 +3,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from PyPDF2 import PdfReader, PdfWriter
 import io
-from voice_input import record_audio, transcribe
+
 
 def load_field_coordinates(json_path):
     """Load field coordinates and values from JSON file."""
@@ -31,17 +31,7 @@ def create_text_overlay(fields, page_width, page_height):
         spacing = field.get("spacing")  # Optional: spacing between characters
         font_size = field.get("font_size", DEFAULT_FONT_SIZE)
         is_bold = field.get("bold", DEFAULT_BOLD)
-        field_type = field.get("type", "text") 
-
-        if value == "":
-            print("Please provide the value for the field:", field_name)
-            audio = record_audio()
-            value = transcribe(audio)  
-
-        if value == "":
-            print(f" No input detected for {field_name}, please try again.")
-            audio = record_audio()
-            value = transcribe(audio)
+        field_type = field.get("type", "text")
         
         if start and value:
             x, y = start[0], start[1]
@@ -117,6 +107,67 @@ def fill_pdf_form(input_pdf_path, output_pdf_path, json_path, form_name="Pay-in-
         writer.write(output_file)
     
     print(f"Filled PDF saved to: {output_pdf_path}")
+    return output_pdf_path
+
+
+def fill_pdf_from_chatbot(chatbot_values, json_path="field_coordinates.json", form_name="Pay-in-Slip",
+                         input_pdf="forms/Pay-in-Slip.pdf", output_pdf="forms/Pay-in-Slip_filled.pdf"):
+    """
+    Fill PDF using values collected from chatbot.
+    
+    Args:
+        chatbot_values: dict of field_name -> value from chatbot
+        json_path: path to field coordinates JSON
+        form_name: name of form in JSON
+        input_pdf: source PDF path
+        output_pdf: output PDF path
+    """
+    # Load field coordinates from JSON
+    forms = load_field_coordinates(json_path)
+    
+    fields = None
+    for form in forms:
+        if form_name in form:
+            fields = form[form_name]
+            break
+    
+    if not fields:
+        print(f"No fields found for form '{form_name}'")
+        return None
+    
+    # Merge chatbot values with field coordinates
+    for field in fields:
+        field_name = field.get("field")
+        if field_name in chatbot_values:
+            field["value"] = chatbot_values[field_name]
+    
+    # Read the original PDF
+    reader = PdfReader(input_pdf)
+    writer = PdfWriter()
+    
+    first_page = reader.pages[0]
+    page_width = float(first_page.mediabox.width)
+    page_height = float(first_page.mediabox.height)
+    
+    print(f"PDF page size: {page_width} x {page_height}")
+    
+    # Create overlay with text
+    overlay_packet = create_text_overlay(fields, page_width, page_height)
+    overlay_reader = PdfReader(overlay_packet)
+    overlay_page = overlay_reader.pages[0]
+    
+    # Merge overlay with original PDF
+    for i, page in enumerate(reader.pages):
+        if i == 0:
+            page.merge_page(overlay_page)
+        writer.add_page(page)
+    
+    # Write output
+    with open(output_pdf, 'wb') as output_file:
+        writer.write(output_file)
+    
+    print(f"\n✅ Filled PDF saved to: {output_pdf}")
+    return output_pdf
 
 
 if __name__ == "__main__":

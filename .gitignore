@@ -1,3 +1,11 @@
-forms/
 __pycache__/
 .env
+.venv/
+*.pyc
+
+# Generated/filled PDFs (keep only blank templates)
+forms/*_filled*.pdf
+forms/*_with_coordinates*.pdf
+
+# Temp files
+*.tmp

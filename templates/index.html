@@ -425,6 +425,72 @@
             cursor: not-allowed;
         }
 
+        /* Voice Buttons */
+        .voice-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            color: var(--secondary);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .voice-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .voice-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .voice-btn.recording {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .voice-btn.speaking {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        /* Voice Status */
+        .voice-status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #fef3c7;
+            color: #92400e;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .voice-status.active {
+            display: flex;
+        }
+
+        .voice-status i {
+            animation: pulse 1s infinite;
+        }
+
         /* Success Modal */
         .modal-overlay {
             position: fixed;
@@ -595,14 +661,24 @@
             </div>
 
             <div class="chat-input-area">
+                <div class="voice-status" id="voiceStatus">
+                    <i class="fas fa-microphone"></i>
+                    <span id="voiceStatusText">Listening...</span>
+                </div>
                 <div class="chat-input-container">
+                    <button class="voice-btn" id="micBtn" title="Voice Input (click to speak)">
+                        <i class="fas fa-microphone"></i>
+                    </button>
                     <textarea 
                         class="chat-input" 
                         id="chatInput" 
-                        placeholder="Type your message..." 
+                        placeholder="Type or speak your message..." 
                         rows="1"
                         onkeydown="handleKeyDown(event)"
                     ></textarea>
+                    <button class="voice-btn" id="speakerBtn" onclick="toggleVoiceOutput()" title="Voice Output">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">
                         <i class="fas fa-paper-plane"></i>
                         Send
@@ -939,6 +1015,233 @@
         document.getElementById('chatInput').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // ==================== VOICE INPUT (MediaRecorder → server ffmpeg → Whisper) ====================
+
+        let isRecording = false;
+        let voiceOutputEnabled = false;
+        let synthesis = window.speechSynthesis;
+
+        // Audio capture state
+        let _stream     = null;
+        let _recorder   = null;
+        let _chunks     = [];
+        let _audioCtx   = null;
+        let _analyser   = null;
+        let _source     = null;
+        let _levelRAF   = null;
+
+        function showStatus(text) {
+            document.getElementById('voiceStatusText').textContent = text;
+        }
+
+        // ----- Live audio level meter (runs alongside MediaRecorder) -----
+        function startLevelMeter() {
+            if (!_analyser) return;
+            const buf = new Uint8Array(_analyser.fftSize);
+            function draw() {
+                if (!_analyser) return;
+                _analyser.getByteTimeDomainData(buf);
+                let peak = 0;
+                for (let i = 0; i < buf.length; i++) {
+                    const v = Math.abs(buf[i] - 128) / 128;
+                    if (v > peak) peak = v;
+                }
+                const bars = '█'.repeat(Math.round(peak * 20));
+                const pct  = Math.round(peak * 100);
+                if (peak < 0.02) {
+                    showStatus('🎤 ⚠️ No mic signal! Check your mic. (click mic to stop)');
+                } else {
+                    showStatus(`🎤 Recording… ${bars} ${pct}%  (click mic to stop)`);
+                }
+                _levelRAF = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function stopLevelMeter() {
+            if (_levelRAF) { cancelAnimationFrame(_levelRAF); _levelRAF = null; }
+        }
+
+        function cleanupAudio() {
+            stopLevelMeter();
+            if (_source)   { try { _source.disconnect(); } catch(e){} _source = null; }
+            if (_analyser) { try { _analyser.disconnect(); } catch(e){} _analyser = null; }
+            if (_audioCtx) { try { _audioCtx.close(); } catch(e){} _audioCtx = null; }
+            if (_stream)   { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+        }
+
+        // ----- Main toggle -----
+        async function toggleVoiceInput() {
+            if (isRecording) {
+                // =================== STOP ===================
+                if (_recorder && _recorder.state === 'recording') {
+                    _recorder.stop();  // triggers 'stop' event handler below
+                }
+                return;
+            }
+
+            // =================== START ===================
+            try {
+                _stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                alert('Cannot access microphone – check browser permissions.');
+                return;
+            }
+
+            // Set up AnalyserNode for live level meter (read-only, doesn't affect recording)
+            try {
+                _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                _source   = _audioCtx.createMediaStreamSource(_stream);
+                _analyser = _audioCtx.createAnalyser();
+                _analyser.fftSize = 2048;
+                _source.connect(_analyser);
+                // Don't connect to destination — we just read levels
+            } catch (e) {
+                console.warn('Could not create level meter:', e);
+            }
+
+            // MediaRecorder for actual audio capture
+            _chunks = [];
+            _recorder = new MediaRecorder(_stream);
+
+            _recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) _chunks.push(e.data);
+            };
+
+            _recorder.onstart = () => {
+                isRecording = true;
+                document.getElementById('micBtn').classList.add('recording');
+                document.getElementById('voiceStatus').classList.add('active');
+                startLevelMeter();
+            };
+
+            _recorder.onstop = async () => {
+                isRecording = false;
+                document.getElementById('micBtn').classList.remove('recording');
+                stopLevelMeter();
+                showStatus('⏳ Transcribing…');
+
+                // Build blob from captured chunks
+                const mimeType = _recorder.mimeType || 'audio/webm';
+                const blob = new Blob(_chunks, { type: mimeType });
+                console.log(`Recording: ${blob.size} bytes, type=${mimeType}`);
+
+                // Cleanup mic/analyser
+                cleanupAudio();
+
+                if (blob.size < 1000) {
+                    showStatus('❌ Recording too short');
+                    setTimeout(() => document.getElementById('voiceStatus').classList.remove('active'), 2500);
+                    return;
+                }
+
+                // Send to server (server handles webm→wav conversion with ffmpeg)
+                try {
+                    const fd = new FormData();
+                    fd.append('audio', blob, 'recording.webm');
+
+                    const res  = await fetch('/api/transcribe', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    console.log('Server response:', data);
+
+                    if (data.success && data.text) {
+                        document.getElementById('chatInput').value = data.text;
+                        showStatus('✓ ' + data.text.substring(0, 60));
+                        setTimeout(() => {
+                            document.getElementById('voiceStatus').classList.remove('active');
+                            sendMessage();
+                        }, 600);
+                    } else {
+                        showStatus('❌ ' + (data.error || 'No speech detected'));
+                        setTimeout(() => document.getElementById('voiceStatus').classList.remove('active'), 3000);
+                    }
+                } catch (err) {
+                    console.error('Transcription error:', err);
+                    showStatus('❌ Server error');
+                    setTimeout(() => document.getElementById('voiceStatus').classList.remove('active'), 3000);
+                }
+            };
+
+            _recorder.start(250);   // collect chunks every 250ms
+        }
+        
+        // Toggle voice output
+        function toggleVoiceOutput() {
+            voiceOutputEnabled = !voiceOutputEnabled;
+            const btn = document.getElementById('speakerBtn');
+            
+            if (voiceOutputEnabled) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                // Speak a confirmation
+                speak('Voice output enabled');
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                // Stop any ongoing speech
+                synthesis.cancel();
+            }
+        }
+        
+        // Speak text
+        function speak(text) {
+            if (!voiceOutputEnabled || !synthesis) return;
+            
+            // Cancel any ongoing speech
+            synthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            utterance.lang = 'en-US';
+            
+            // Try to use a natural voice
+            const voices = synthesis.getVoices();
+            const preferredVoice = voices.find(v => 
+                v.name.includes('Google') || 
+                v.name.includes('Microsoft') ||
+                v.name.includes('Natural')
+            ) || voices.find(v => v.lang.startsWith('en'));
+            
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+            
+            utterance.onstart = () => {
+                document.getElementById('speakerBtn').classList.add('speaking');
+            };
+            
+            utterance.onend = () => {
+                document.getElementById('speakerBtn').classList.remove('speaking');
+            };
+            
+            synthesis.speak(utterance);
+        }
+        
+        // Override addMessage to include voice output
+        const originalAddMessage = addMessage;
+        addMessage = function(role, content) {
+            originalAddMessage(role, content);
+            
+            // Speak assistant messages if voice output is enabled
+            if (role === 'assistant' && voiceOutputEnabled) {
+                speak(content);
+            }
+        };
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load voices (needed for some browsers)
+            if (synthesis) {
+                synthesis.getVoices();
+                synthesis.onvoiceschanged = () => synthesis.getVoices();
+            }
+            
+            // Attach mic button click handler
+            document.getElementById('micBtn').addEventListener('click', toggleVoiceInput);
         });
     </script>
 </body>

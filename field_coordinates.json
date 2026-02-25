@@ -46,6 +46,7 @@
     {
         "field": "Amount in Words",
         "description": "Amount in words",
+        "derive_from": "Amount",
         "start": [100, 152],
         "end": [250, 152],  
         "value": "",
@@ -80,7 +81,7 @@
         "description": "Amount to be deposited",
         "start": [240, 182],
         "end": [280, 182],
-        "value": "5000",
+        "value": "",
         "font_size": 10
     }
 ] 

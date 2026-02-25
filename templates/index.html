@@ -1017,72 +1017,51 @@
             this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
 
-        // ==================== VOICE INPUT (MediaRecorder → server ffmpeg → Whisper) ====================
+        // ==================== VOICE INPUT ====================
 
         let isRecording = false;
         let voiceOutputEnabled = false;
         let synthesis = window.speechSynthesis;
-
-        // Audio capture state
-        let _stream     = null;
-        let _recorder   = null;
-        let _chunks     = [];
-        let _audioCtx   = null;
-        let _analyser   = null;
-        let _source     = null;
-        let _levelRAF   = null;
+        let _stream = null, _recorder = null, _chunks = [];
+        let _audioCtx = null, _analyser = null, _source = null, _levelRAF = null;
 
         function showStatus(text) {
             document.getElementById('voiceStatusText').textContent = text;
         }
 
-        // ----- Live audio level meter (runs alongside MediaRecorder) -----
+        // Live audio level meter
         function startLevelMeter() {
             if (!_analyser) return;
             const buf = new Uint8Array(_analyser.fftSize);
-            function draw() {
+            (function draw() {
                 if (!_analyser) return;
                 _analyser.getByteTimeDomainData(buf);
                 let peak = 0;
                 for (let i = 0; i < buf.length; i++) {
-                    const v = Math.abs(buf[i] - 128) / 128;
-                    if (v > peak) peak = v;
+                    peak = Math.max(peak, Math.abs(buf[i] - 128) / 128);
                 }
                 const bars = '█'.repeat(Math.round(peak * 20));
-                const pct  = Math.round(peak * 100);
-                if (peak < 0.02) {
-                    showStatus('🎤 ⚠️ No mic signal! Check your mic. (click mic to stop)');
-                } else {
-                    showStatus(`🎤 Recording… ${bars} ${pct}%  (click mic to stop)`);
-                }
+                showStatus(peak < 0.02
+                    ? '🎤 ⚠️ No mic signal! Check your mic.'
+                    : `🎤 Recording… ${bars} ${Math.round(peak*100)}%`);
                 _levelRAF = requestAnimationFrame(draw);
-            }
-            draw();
-        }
-
-        function stopLevelMeter() {
-            if (_levelRAF) { cancelAnimationFrame(_levelRAF); _levelRAF = null; }
+            })();
         }
 
         function cleanupAudio() {
-            stopLevelMeter();
+            if (_levelRAF) { cancelAnimationFrame(_levelRAF); _levelRAF = null; }
             if (_source)   { try { _source.disconnect(); } catch(e){} _source = null; }
             if (_analyser) { try { _analyser.disconnect(); } catch(e){} _analyser = null; }
             if (_audioCtx) { try { _audioCtx.close(); } catch(e){} _audioCtx = null; }
             if (_stream)   { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
         }
 
-        // ----- Main toggle -----
         async function toggleVoiceInput() {
             if (isRecording) {
-                // =================== STOP ===================
-                if (_recorder && _recorder.state === 'recording') {
-                    _recorder.stop();  // triggers 'stop' event handler below
-                }
+                if (_recorder && _recorder.state === 'recording') _recorder.stop();
                 return;
             }
 
-            // =================== START ===================
             try {
                 _stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             } catch (err) {
@@ -1090,19 +1069,18 @@
                 return;
             }
 
-            // Set up AnalyserNode for live level meter (read-only, doesn't affect recording)
+            // AnalyserNode for live level meter (read-only, doesn't affect recording)
             try {
                 _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 _source   = _audioCtx.createMediaStreamSource(_stream);
                 _analyser = _audioCtx.createAnalyser();
                 _analyser.fftSize = 2048;
                 _source.connect(_analyser);
-                // Don't connect to destination — we just read levels
             } catch (e) {
-                console.warn('Could not create level meter:', e);
+                console.warn('Level meter unavailable:', e);
             }
 
-            // MediaRecorder for actual audio capture
+            // MediaRecorder captures audio as webm; server converts to WAV
             _chunks = [];
             _recorder = new MediaRecorder(_stream);
 
@@ -1120,15 +1098,9 @@
             _recorder.onstop = async () => {
                 isRecording = false;
                 document.getElementById('micBtn').classList.remove('recording');
-                stopLevelMeter();
                 showStatus('⏳ Transcribing…');
 
-                // Build blob from captured chunks
-                const mimeType = _recorder.mimeType || 'audio/webm';
-                const blob = new Blob(_chunks, { type: mimeType });
-                console.log(`Recording: ${blob.size} bytes, type=${mimeType}`);
-
-                // Cleanup mic/analyser
+                const blob = new Blob(_chunks, { type: _recorder.mimeType || 'audio/webm' });
                 cleanupAudio();
 
                 if (blob.size < 1000) {
@@ -1137,14 +1109,11 @@
                     return;
                 }
 
-                // Send to server (server handles webm→wav conversion with ffmpeg)
                 try {
                     const fd = new FormData();
                     fd.append('audio', blob, 'recording.webm');
-
                     const res  = await fetch('/api/transcribe', { method: 'POST', body: fd });
                     const data = await res.json();
-                    console.log('Server response:', data);
 
                     if (data.success && data.text) {
                         document.getElementById('chatInput').value = data.text;
@@ -1164,7 +1133,7 @@
                 }
             };
 
-            _recorder.start(250);   // collect chunks every 250ms
+            _recorder.start(250);
         }
         
         // Toggle voice output

@@ -3,13 +3,17 @@ Flask backend for BankBuddy Form Assistant
 """
 import os
 import json
+import shutil
 import tempfile
+import subprocess
+
+import numpy as np
+from scipy.io import wavfile
 from flask import Flask, render_template, request, jsonify, send_file
 from openai import OpenAI
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Import from chatbot.py to avoid duplication
 from chatbot import (
     load_available_forms,
     load_form_coordinates,
@@ -19,6 +23,7 @@ from chatbot import (
     build_form_finder_prompt,
     build_system_prompt as build_form_filling_prompt
 )
+from voice_input import transcribe as whisper_transcribe, SAMPLE_RATE as WHISPER_SR
 
 load_dotenv()
 
@@ -306,93 +311,49 @@ def download_file(filename):
     return send_file(filename, as_attachment=True)
 
 
-# ---- Whisper model (loaded once at startup) ----
-import numpy as np
-import subprocess
-from scipy.io import wavfile
-from voice_input import transcribe as whisper_transcribe, SAMPLE_RATE as WHISPER_SR
+# ---- Voice transcription (ffmpeg + local Whisper) ----
 
-FFMPEG_PATH = r"C:\Users\Abhinand\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
-
-# Known Whisper hallucinations on silence / near-silence
-HALLUCINATION_WORDS = {
-    "you", "thank you", "thanks", "thank you.", "bye", "bye.",
-    "thanks for watching", "thanks for watching.",
-    "thank you for watching", "thank you for watching.",
-    "subscribe", "like and subscribe",
-    "the end", "the end.", "",
-}
+FFMPEG_PATH = shutil.which("ffmpeg") or r"C:\Users\Abhinand\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
 
 
-def _ensure_wav(input_path, output_path):
-    """If input_path is already WAV, return it. Otherwise ffmpeg-convert to 16kHz mono WAV."""
-    with open(input_path, 'rb') as f:
-        magic = f.read(4)
-    if magic[:4] in (b'RIFF', b'RIFX', b'RF64'):
-        print(f"[STT] File is already WAV")
-        return input_path
-    # Not WAV (probably webm/ogg from browser) — convert with ffmpeg
-    print(f"[STT] File magic={magic!r}, converting with ffmpeg...")
-    proc = subprocess.run(
+def convert_to_wav(input_path, output_path):
+    """Convert any audio file (webm/ogg/etc.) to 16 kHz mono WAV using ffmpeg."""
+    result = subprocess.run(
         [FFMPEG_PATH, '-y', '-i', input_path,
          '-ar', str(WHISPER_SR), '-ac', '1', '-sample_fmt', 's16',
          output_path],
         capture_output=True, text=True
     )
-    if proc.returncode != 0:
-        print(f"[STT] ffmpeg error: {proc.stderr}")
-        raise RuntimeError(f"ffmpeg conversion failed: {proc.stderr[:200]}")
-    print(f"[STT] ffmpeg converted to {os.path.getsize(output_path)} bytes")
-    return output_path
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg conversion failed: {result.stderr[:200]}")
 
 
 @app.route('/api/transcribe', methods=['POST'])
 def transcribe_audio():
-    """Transcribe browser audio using local Whisper. Accepts WAV or webm."""
+    """Transcribe browser audio using local Whisper model."""
     if 'audio' not in request.files:
         return jsonify({"error": "No audio file"}), 400
 
     audio_file = request.files['audio']
-    temp_raw = os.path.join(tempfile.gettempdir(), 'bankbuddy_upload')
+    temp_src = os.path.join(tempfile.gettempdir(), 'bankbuddy_upload')
     temp_wav = os.path.join(tempfile.gettempdir(), 'bankbuddy_rec.wav')
 
     try:
-        # 1. Save whatever the browser sent
-        audio_file.save(temp_raw)
-        raw_size = os.path.getsize(temp_raw)
-        print(f"[STT] Received upload: {raw_size} bytes")
-
-        if raw_size < 200:
+        audio_file.save(temp_src)
+        if os.path.getsize(temp_src) < 200:
             return jsonify({"error": "Empty recording"}), 400
 
-        # 2. Ensure we have a proper WAV (convert if needed)
-        wav_path = _ensure_wav(temp_raw, temp_wav)
+        # Convert browser audio (webm) → 16 kHz mono WAV
+        convert_to_wav(temp_src, temp_wav)
 
-        # 3. Read WAV → float32 numpy array
-        sr, raw = wavfile.read(wav_path)
+        # Read WAV into float32 numpy array
+        sr, raw = wavfile.read(temp_wav)
         audio_np = raw.astype(np.float32) / 32768.0
-        duration = len(audio_np) / sr
-        peak = float(np.max(np.abs(audio_np)))
-        rms  = float(np.sqrt(np.mean(audio_np ** 2)))
-        print(f"[STT] duration={duration:.1f}s  sr={sr}  peak={peak:.4f}  rms={rms:.6f}")
+        print(f"[STT] {len(audio_np)/sr:.1f}s, peak={np.max(np.abs(audio_np)):.3f}")
 
-        # 4. Silence gate
-        if peak < 0.01:
-            print("[STT] REJECTED: audio is silent (peak < 0.01)")
-            return jsonify({"error": "No speech detected – microphone may be muted"}), 400
-
-        if duration < 0.3:
-            print("[STT] REJECTED: too short")
-            return jsonify({"error": "Recording too short"}), 400
-
-        # 5. Transcribe with LOCAL Whisper
+        # Transcribe
         text = whisper_transcribe(audio_np, sr)
-        print(f"[STT] raw result: '{text}'")
-
-        # 6. Hallucination filter
-        if text.strip().lower().rstrip('.!?,') in HALLUCINATION_WORDS:
-            print(f"[STT] REJECTED as hallucination: '{text}'")
-            return jsonify({"error": "No speech detected – please speak louder or check your mic"}), 400
+        print(f"[STT] result: '{text}'")
 
         return jsonify({"text": text, "success": True})
 
@@ -402,12 +363,11 @@ def transcribe_audio():
         return jsonify({"error": str(e)}), 500
 
     finally:
-        for p in (temp_raw, temp_wav):
-            if os.path.exists(p):
-                try:
-                    os.unlink(p)
-                except OSError:
-                    pass
+        for p in (temp_src, temp_wav):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 if __name__ == '__main__':

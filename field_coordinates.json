@@ -46,7 +46,6 @@
     {
         "field": "Amount in Words",
         "description": "Amount in words",
-        "derive_from": "Amount",
         "start": [100, 152],
         "end": [250, 152],  
         "value": "",

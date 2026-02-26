@@ -15,19 +15,14 @@ def build_system_prompt(form_fields, filled_values=None):
     """Build system prompt dynamically based on form fields."""
     filled_values = filled_values or {}
     
-    # Build field list with derivation hints
+    # Build field list
     fields_list = []
-    for i, field in enumerate(form_fields, 1):
+    for field in form_fields:
         field_name = field.get("field")
-        # Skip fields that already have values
         if field.get("value") or filled_values.get(field_name):
             continue
         desc = field.get("description", "")
-        derive = field.get("derive_from")
-        entry = f"- {field_name}: {desc}"
-        if derive:
-            entry += f" [AUTO-DERIVE from {derive} — do NOT ask the user for this]"
-        fields_list.append(entry)
+        fields_list.append(f"- {field_name}: {desc}")
     
     fields_str = "\n".join(fields_list) if fields_list else "All fields are filled!"
     
@@ -36,27 +31,22 @@ def build_system_prompt(form_fields, filled_values=None):
 FIELDS STILL NEEDED:
 {fields_str}
 
-CRITICAL RULES:
+RULES:
 
 1. EXTRACT AGGRESSIVELY: When the user sends a message, extract EVERY field you can
-   from it. A single message like "Credit Mr. Anil Rs 5000 by cheque 456704" contains
-   Credit To, Amount, Amount in Words, AND Cash/DD/Cheque. Extract ALL of them at once.
+   from it. A single message often contains multiple field values — get them all.
 
-2. AUTO-DERIVE — NEVER ASK: Some fields are marked [AUTO-DERIVE]. You MUST compute
-   these yourself. Examples:
-   - "Amount in Words" → convert the numeric amount to English words
-     (e.g. 5670 → "Five Thousand Six Hundred and Seventy")
-   - Duplicate date fields → copy from the primary date
-   Do NOT ask the user for derivable fields. Ever.
+2. BE SMART ABOUT RELATED FIELDS: If you can compute or infer a field from information
+   you already have, fill it yourself. Never ask the user for something you can figure out.
 
-3. ASK EFFICIENTLY: When asking, request ALL remaining unfilled fields together in
-   one question. Don't ask one field at a time.
+3. ASK EFFICIENTLY: Request all remaining unfilled fields together in one question.
+   Don't ask one field at a time.
 
-4. UNDERSTAND INTENT: "through cheque" means payment mode is Cheque. "cash deposit"
-   means Cash. "by DD" means Demand Draft. Map these to the right field.
+4. UNDERSTAND INTENT: Map natural language to the right fields. "through cheque" means
+   the payment mode is Cheque. "cash deposit" means Cash. Infer, don't ask.
 
 5. USE CONTEXT: The [Context] block shows what's filled and what's still needed.
-   Never re-ask for filled fields. Use the conversation history to avoid repeating.
+   Never re-ask for filled fields.
 
 RESPOND WITH JSON ONLY:
 {{
@@ -65,10 +55,10 @@ RESPOND WITH JSON ONLY:
     "ready_to_generate": true/false
 }}
 
-When all fields are filled, show a summary of all values and ask user to confirm.
-Set ready_to_generate=true ONLY after user explicitly confirms the summary.
+When all fields are filled, show a summary and ask user to confirm.
+Set ready_to_generate=true ONLY after user explicitly confirms.
 
-Be warm, patient, helpful, and EFFICIENT — minimize the number of questions."""
+Be warm, helpful, and EFFICIENT — minimize the number of questions."""
 
 class FormAssistant:
     # Each instance of FormAssistant has its own conversation history and field values

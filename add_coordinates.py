@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 # ============ CONFIGURATION ============
-INPUT_PDF = "forms/Pay-in-slip.pdf"  # <-- Change this to your PDF file path
+INPUT_PDF = "forms/UID_Aadhar_linking_letter.pdf"  # <-- Change this to your PDF file path
 GRID_SPACING = 50                       # Spacing between grid lines (in points)
 MAJOR_GRID_SPACING = 100                # Spacing for major/labeled grid lines
 FONT_SIZE = 7                           # Font size for coordinate labels

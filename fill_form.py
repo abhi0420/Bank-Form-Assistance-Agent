@@ -1,6 +1,7 @@
 import json
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import simpleSplit
 from PyPDF2 import PdfReader, PdfWriter
 import io
 
@@ -17,10 +18,36 @@ def load_field_coordinates(json_path):
 DEFAULT_FONT_SIZE = 10
 DEFAULT_BOLD = True
 DEFAULT_COLOR = (0, 0, 0.5)  # Navy blue (RGB)
+DEFAULT_FONT_FAMILY = "Helvetica"
 
 
-def create_text_overlay(fields, page_width, page_height):
+def hex_to_rgb(hex_color):
+    """Convert '#RRGGBB' to (r, g, b) floats 0-1."""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+
+
+def resolve_font_name(family, bold):
+    """Map a font family + bold flag to a reportlab font name."""
+    fonts = {
+        'Helvetica':   ('Helvetica',       'Helvetica-Bold'),
+        'Courier':     ('Courier',         'Courier-Bold'),
+        'Times-Roman': ('Times-Roman',     'Times-Bold'),
+    }
+    pair = fonts.get(family, fonts['Helvetica'])
+    return pair[1] if bold else pair[0]
+
+
+def create_text_overlay(fields, page_width, page_height, pdf_settings=None):
     """Create a PDF with text at the specified coordinates."""
+    pdf_settings = pdf_settings or {}
+    
+    # Resolve global settings from frontend (with defaults)
+    global_family = pdf_settings.get('font_family', DEFAULT_FONT_FAMILY)
+    global_size   = pdf_settings.get('font_size', DEFAULT_FONT_SIZE)
+    global_bold   = pdf_settings.get('bold', DEFAULT_BOLD)
+    global_color  = hex_to_rgb(pdf_settings['color']) if 'color' in pdf_settings else DEFAULT_COLOR
+    
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=(page_width, page_height))
     
@@ -29,8 +56,8 @@ def create_text_overlay(fields, page_width, page_height):
         start = field.get("start")
         value = field.get("value", "")
         spacing = field.get("spacing")  # Optional: spacing between characters
-        font_size = field.get("font_size", DEFAULT_FONT_SIZE)
-        is_bold = field.get("bold", DEFAULT_BOLD)
+        font_size = field.get("font_size", global_size)
+        is_bold = field.get("bold", global_bold)
         field_type = field.get("type", "text")
         
         if start and value:
@@ -38,12 +65,12 @@ def create_text_overlay(fields, page_width, page_height):
             # PDF coordinates start from bottom-left, so we need to flip y
             pdf_y = page_height - y
             
-            # Set font based on bold preference
-            font_name = "Helvetica-Bold" if is_bold else "Helvetica"
+            # Set font using global family + per-field bold/size
+            font_name = resolve_font_name(global_family, is_bold)
             can.setFont(font_name, font_size)
             
-            # Set color (navy blue by default)
-            can.setFillColorRGB(*DEFAULT_COLOR)
+            # Set color from settings
+            can.setFillColorRGB(*global_color)
             
             # Handle checkbox type differently
             if field_type == "checkbox":
@@ -51,6 +78,23 @@ def create_text_overlay(fields, page_width, page_height):
                 can.setFont("Helvetica-Bold", font_size)
                 print(f"Filling checkbox '{field_name}' with '{value}' at ({x}, {pdf_y})")
                 can.drawString(x, pdf_y, str(value))
+            elif field.get("multiline"):
+                # Multiline: word-wrap text within bounding box
+                end = field.get("end", start)
+                box_width = abs(end[0] - start[0])
+                box_height = abs(end[1] - start[1])
+                line_spacing = field.get("line_spacing", font_size * 1.3)
+                
+                # Word-wrap the text to fit the available width
+                lines = simpleSplit(str(value), font_name, font_size, box_width)
+                
+                # Calculate max lines that fit in the bounding box
+                max_lines = max(1, int(box_height / line_spacing) + 1) if box_height > 0 else len(lines)
+                lines = lines[:max_lines]
+                
+                print(f"Filling multiline '{field_name}' with {len(lines)} lines at ({x}, {pdf_y}) [box={box_width}x{box_height}, spacing={line_spacing}]")
+                for i, line in enumerate(lines):
+                    can.drawString(x, pdf_y - (i * line_spacing), line)
             elif spacing:
                 # Draw each character with spacing (for fields with individual boxes)
                 print(f"Filling '{field_name}' with '{value}' at ({x}, {pdf_y}) [size={font_size}, spacing={spacing}]")
@@ -113,7 +157,7 @@ def fill_pdf_form(input_pdf_path, output_pdf_path, json_path, form_name="Pay-in-
 
 
 def fill_pdf_from_chatbot(chatbot_values, json_path="field_coordinates.json", form_name="Pay-in-Slip",
-                         input_pdf=None, output_pdf=None):
+                         input_pdf=None, output_pdf=None, pdf_settings=None):
     """
     Fill PDF using values collected from chatbot.
     
@@ -162,7 +206,7 @@ def fill_pdf_from_chatbot(chatbot_values, json_path="field_coordinates.json", fo
     print(f"PDF page size: {page_width} x {page_height}")
     
     # Create overlay with text
-    overlay_packet = create_text_overlay(fields, page_width, page_height)
+    overlay_packet = create_text_overlay(fields, page_width, page_height, pdf_settings)
     overlay_reader = PdfReader(overlay_packet)
     overlay_page = overlay_reader.pages[0]
     

@@ -33,20 +33,15 @@ FIELDS STILL NEEDED:
 
 RULES:
 
-1. EXTRACT AGGRESSIVELY: When the user sends a message, extract EVERY field you can
-   from it. A single message often contains multiple field values — get them all.
+1. EXTRACT AGGRESSIVELY: When the user sends a message, extract EVERY field you can from it. A single message often contains multiple field values — get them all.
 
-2. BE SMART ABOUT RELATED FIELDS: If you can compute or infer a field from information
-   you already have, fill it yourself. Never ask the user for something you can figure out. For ex, if you have amount in number, you can convert it to words. 
+2. BE SMART ABOUT RELATED FIELDS: If you can compute or infer a field from information you already have, fill it yourself. Never ask the user for something you can figure out, or for duplicate fields. For ex, if you have amount in number, you can convert it to words. 
 
-3. ASK EFFICIENTLY: Request all remaining unfilled fields together in one question.
-   Don't ask one field at a time. Only if you feel the user has given wrong/conflicting info, ask for clarification on that specific point. 
+3. ASK EFFICIENTLY: Request all remaining unfilled fields together in one question. Don't ask one field at a time. Only if you feel the user has given wrong/conflicting info, ask for clarification on that specific point. 
 
-4. UNDERSTAND INTENT: Map natural language to the right fields. "through cheque" means
-   the payment mode is Cheque. "cash deposit" means Cash. Infer, don't ask.
+4. UNDERSTAND INTENT: Map natural language to the right fields. "through cheque" means the payment mode is Cheque. "cash deposit" means Cash. Infer, don't ask.
 
-5. USE CONTEXT: The [Context] block shows what's filled and what's still needed.
-   Never re-ask for filled fields.
+5. USE CONTEXT: The [Context] block shows what's filled and what's still needed. Never re-ask for filled fields. Ensure to continue the conversation in the same language the user is using.
 
 RESPOND WITH JSON ONLY:
 {{

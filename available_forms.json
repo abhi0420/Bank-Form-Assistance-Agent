@@ -9,6 +9,19 @@
                 "pdf_path": "forms/Pay-in-Slip.pdf",
                 "coordinates_file": "field_coordinates.json"
             }
+            
+        ]
+    },
+    {
+        "bank": "State Bank of India",
+        "forms": [
+            {
+                "form_name": "Aadhar Linking Form",
+                "description": "Link Aadhar card with bank account",
+                "aliases": ["aadhar linking form", "aadhar update form"],
+                "pdf_path": "forms/UID_Aadhar_linking_letter.pdf",
+                "coordinates_file": "field_coordinates.json"
+            }
         ]
     }
 ]

@@ -84,6 +84,94 @@
         "font_size": 10
     }
 ] 
+},
+
+{  
+    "form_name": "Aadhar Linking Form",
+    "bank": "State Bank of India", 
+    "description": "Link Aadhar with bank account",
+    "pdf_path": "forms/UID_Aadhar_linking_letter.pdf",
+    "form_fields": 
+    
+    [   
+        {
+        "field": "Branch Name",
+        "description": "Name of the bank branch",
+        "start": [110, 110],
+        "end": [200, 145],
+        "value": "",
+        "font_size": 10,
+        "multiline": true,
+        "line_spacing": 14
+        },
+    {
+        "field": "Date",
+        "description": "Date of the letter",
+        "start": [390, 155],
+        "end": [440, 155],
+        "value": "",
+        "font_size": 10
+    },
+    {
+        "field": "Name",
+        "description": "Name of the account holder",
+        "start": [200, 214],
+        "end": [300, 214],
+        "value": "",
+        "font_size": 12,
+        "bold": true
+    },
+    {
+        "field": "Account Number",
+        "description": "Number of the account",
+        "start": [340, 260],
+        "end": [430, 260],
+        "value": "",
+        "font_size": 10
+    },
+    {
+        "field": "Branch Name_2",
+        "description": "Name of the bank branch (duplicate field)",
+        "start": [147, 270],
+        "end": [250, 270],
+        "value": "",
+        "font_size": 10
+    },
+    {
+        "field": "Aadhar Number",
+        "description": "Aadhar number of the account holder",
+        "start": [190, 335],
+        "end": [340, 335],  
+        "value": "",
+        "font_size": 10
+    },
+    {
+        "field": "Name of Aadhar Holder",
+        "description": "Name of the Aadhar holder as per Aadhar card",
+        "start": [225, 345],
+        "end": [340, 345],
+        "value": "",
+        "font_size": 10
+    },
+    {
+        "field": "Address on Aadhar",
+        "description": "Address as per Aadhar card",
+        "start": [230, 360],
+        "end": [345, 390],
+        "value": "",
+        "font_size": 9,
+        "multiline": true,
+        "line_spacing": 12
+    },
+    {
+        "field": "Name below Signature",
+        "description": "Name of the account holder below the signature (Same as the name field)",
+        "start": [110, 540],
+        "end": [220, 540],
+        "value": "",
+        "font_size": 10
+    }
+    ]
 }
 
 ]

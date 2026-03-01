@@ -289,10 +289,14 @@ def generate_pdf():
     
     from fill_form import fill_pdf_from_chatbot
     
+    # Get PDF styling settings from frontend
+    pdf_settings = data.get("pdf_settings", {})
+    
     output_path = fill_pdf_from_chatbot(
         chatbot_values=session["field_values"],
         json_path=session.get("coordinates_file", "field_coordinates.json"),
-        form_name=session["form_name"]
+        form_name=session["form_name"],
+        pdf_settings=pdf_settings
     )
     
     if output_path:

@@ -115,8 +115,8 @@
     {
         "field": "Name",
         "description": "Name of the account holder",
-        "start": [200, 214],
-        "end": [300, 214],
+        "start": [200, 212],
+        "end": [300, 212],
         "value": "",
         "font_size": 12,
         "bold": true
@@ -124,8 +124,8 @@
     {
         "field": "Account Number",
         "description": "Number of the account",
-        "start": [340, 260],
-        "end": [430, 260],
+        "start": [340, 258],
+        "end": [430, 258],
         "value": "",
         "font_size": 10
     },
@@ -140,8 +140,8 @@
     {
         "field": "Aadhar Number",
         "description": "Aadhar number of the account holder",
-        "start": [190, 335],
-        "end": [340, 335],  
+        "start": [190, 330],
+        "end": [340, 330],  
         "value": "",
         "font_size": 10
     },
@@ -166,8 +166,8 @@
     {
         "field": "Name below Signature",
         "description": "Name of the account holder below the signature (Same as the name field)",
-        "start": [110, 540],
-        "end": [220, 540],
+        "start": [110, 536],
+        "end": [220, 536],
         "value": "",
         "font_size": 10
     }

@@ -1,5 +1,5 @@
 """
-Flask backend for BankBuddy Form Assistant
+Flask backend for Bank Form Assistant
 """
 import os
 import json
@@ -339,8 +339,8 @@ def transcribe_audio():
         return jsonify({"error": "No audio file"}), 400
 
     audio_file = request.files['audio']
-    temp_src = os.path.join(tempfile.gettempdir(), 'bankbuddy_upload')
-    temp_wav = os.path.join(tempfile.gettempdir(), 'bankbuddy_rec.wav')
+    temp_src = os.path.join(tempfile.gettempdir(), 'bfa_upload')
+    temp_wav = os.path.join(tempfile.gettempdir(), 'bfa_rec.wav')
 
     try:
         audio_file.save(temp_src)

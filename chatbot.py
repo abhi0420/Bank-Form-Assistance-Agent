@@ -26,7 +26,7 @@ def build_system_prompt(form_fields, filled_values=None):
     
     fields_str = "\n".join(fields_list) if fields_list else "All fields are filled!"
     
-    return f"""You are BankBuddy, a friendly assistant helping users fill a bank form.
+    return f"""You are Bank Form Assistant, a friendly assistant helping users fill a bank form.
 
 FIELDS STILL NEEDED:
 {fields_str}
@@ -176,7 +176,7 @@ def build_form_finder_prompt(available_forms):
             "aliases": f["aliases"]
         })
     
-    return f"""You are BankBuddy, a friendly banking assistant helping users find and fill bank forms.
+    return f"""You are Bank Form Assistant, a friendly banking assistant helping users find and fill bank forms.
 
 AVAILABLE FORMS:
 {json.dumps(form_info, indent=2)}
@@ -263,7 +263,7 @@ class FormFinder:
             result = json.loads(response.choices[0].message.content)
             return result.get("message", "Hello! How can I help you today?")
         except:
-            return "Hello! I'm BankBuddy. How can I help you with your banking forms today?"
+            return "Hello! I'm your Bank Form Assistant. How can I help you with your banking forms today?"
 
 
 def get_form_details(available_forms, form_name, bank_name=None):
@@ -292,7 +292,7 @@ def load_form_fields(coordinates_file, form_name):
 # --- Main ---
 if __name__ == "__main__":
     print("=" * 50)
-    print("🏦 BankBuddy - Form Filling Assistant")
+    print("🏦 Bank Form Assistant")
     print("=" * 50)
     
     # Load catalog of available forms
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     
     # Get and show greeting
     greeting = form_finder.get_greeting()
-    print(f"🤖 BankBuddy: {greeting}\n")
+    print(f"🤖 Assistant: {greeting}\n")
     
     # Phase 1: Form Detection Conversation
     form_name = None
@@ -322,11 +322,11 @@ if __name__ == "__main__":
             continue
         
         if user_input.lower() in ['quit', 'exit', 'q']:
-            print("\n🤖 BankBuddy: Goodbye! Have a great day! 👋")
+            print("\n🤖 Assistant: Goodbye! Have a great day! 👋")
             exit()
         
         response = form_finder.chat(user_input)
-        print(f"\n🤖 BankBuddy: {response.get('message', '')}\n")
+        print(f"\n🤖 Assistant: {response.get('message', '')}\n")
         
         # Check if user wants to end
         if response.get("end_conversation"):
@@ -369,7 +369,7 @@ if __name__ == "__main__":
     
     # Get initial prompt from form assistant
     initial_response = assistant.chat(f"I want to fill the {form_name} form. What information do you need?")
-    print(f"🤖 BankBuddy: {initial_response['message']}\n")
+    print(f"🤖 Assistant: {initial_response['message']}\n")
     
     # Phase 3: Form Filling Conversation
     while True:
@@ -382,7 +382,7 @@ if __name__ == "__main__":
             continue
         
         response = assistant.chat(user_input)
-        print(f"\n🤖 BankBuddy: {response['message']}\n")
+        print(f"\n🤖 Assistant: {response['message']}\n")
         
         if response.get('ready_to_generate'):
             print("=" * 50)

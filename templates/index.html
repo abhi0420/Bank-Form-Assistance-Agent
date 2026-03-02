@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BankBuddy - Form Assistant</title>
+    <title>Bank Form Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -43,8 +43,8 @@
 
         /* Sidebar */
         .sidebar {
-            width: 320px;
-            background: var(--surface);
+            width: 330px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
@@ -52,21 +52,42 @@
         }
 
         .sidebar-header {
-            padding: 24px;
+            padding: 22px 24px;
             border-bottom: 1px solid var(--border);
+            background: var(--surface);
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
+            gap: 10px;
         }
 
-        .logo i {
-            font-size: 1.75rem;
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .logo-text {
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 50%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-text span {
+            font-weight: 400;
+            opacity: 0.7;
         }
 
         .sidebar-content {
@@ -75,66 +96,131 @@
             padding: 16px;
         }
 
+        .sidebar-content::-webkit-scrollbar { width: 4px; }
+        .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
         .section-title {
-            font-size: 0.75rem;
-            font-weight: 600;
+            font-size: 0.65rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
             color: var(--text-light);
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             padding: 0 8px;
         }
 
-        /* Bank Cards */
+        /* Bank Cards — collapsible accordion */
         .bank-group {
-            margin-bottom: 24px;
+            margin-bottom: 10px;
         }
 
         .bank-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
-            background: var(--primary-light);
-            border-radius: 10px;
-            margin-bottom: 8px;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s;
+            user-select: none;
         }
 
         .bank-header:hover {
-            background: #bfdbfe;
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
         }
 
-        .bank-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--primary);
-            border-radius: 8px;
+        .bank-header.open {
+            border-color: var(--primary);
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            background: var(--primary-light);
+        }
+
+        .bank-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            object-fit: contain;
+            background: white;
+            padding: 3px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .bank-logo-fallback {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
             color: white;
-            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .bank-info {
+            flex: 1;
+            min-width: 0;
         }
 
         .bank-name {
             font-weight: 600;
-            color: var(--primary-dark);
+            font-size: 0.9rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bank-form-count {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-top: 1px;
+        }
+
+        .bank-chevron {
+            color: var(--text-light);
+            font-size: 0.7rem;
+            transition: transform 0.25s ease;
+            flex-shrink: 0;
+        }
+
+        .bank-header.open .bank-chevron {
+            transform: rotate(180deg);
         }
 
         .form-list {
-            padding-left: 8px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        .form-list.open {
+            max-height: 500px;
+        }
+
+        .form-list-inner {
+            padding: 6px;
         }
 
         .form-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
+            gap: 12px;
+            padding: 11px 14px;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
             border: 1px solid transparent;
         }
 
@@ -148,24 +234,57 @@
             border-color: var(--primary);
         }
 
-        .form-item i {
+        .form-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--primary);
-            font-size: 1rem;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .form-item.active .form-icon {
+            background: var(--primary);
+            color: white;
         }
 
         .form-info {
             flex: 1;
+            min-width: 0;
         }
 
         .form-name {
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-bottom: 2px;
+            color: var(--text);
         }
 
         .form-desc {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: var(--text-light);
+        }
+
+        .sidebar-footer i {
+            color: var(--primary);
         }
 
         /* Main Content */
@@ -941,7 +1060,7 @@
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
-                left: -320px;
+                left: -330px;
                 top: 0;
                 bottom: 0;
                 z-index: 100;
@@ -969,15 +1088,19 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <i class="fas fa-university"></i>
-                    <span>BankBuddy</span>
+                    <div class="logo-icon"><i class="fas fa-university"></i></div>
+                    <div class="logo-text">Bank Form <span>Assistant</span></div>
                 </div>
             </div>
             <div class="sidebar-content">
-                <div class="section-title">Available Forms</div>
+                <div class="section-title">Banks & Forms</div>
                 <div id="formsList">
                     <!-- Forms will be loaded here -->
                 </div>
+            </div>
+            <div class="sidebar-footer">
+                <i class="fas fa-shield-alt"></i>
+                <span>Your data stays on your device</span>
             </div>
         </aside>
 
@@ -1007,8 +1130,8 @@
                     <div class="welcome-icon">
                         <i class="fas fa-comments"></i>
                     </div>
-                    <h2>Hello There!</h2>
-                    <p>Select a form from the sidebar to get started, or simply tell me what you need help with.</p>
+                    <h2>Welcome to Bank Form Assistant</h2>
+                    <p>Pick a form from the sidebar, or just describe what you need — I'll find the right form and walk you through it.</p>
                 </div>
             </div>
 
@@ -1208,6 +1331,19 @@
             startNewChat();
         });
 
+        // Bank logo URLs (add more as needed)
+        const BANK_LOGOS = {
+            'State Bank of India': 'https://upload.wikimedia.org/wikipedia/en/thumb/5/58/State_Bank_of_India_logo.svg/74px-State_Bank_of_India_logo.svg.png',
+            'Post Office':        '/static/post_office_logo.png',
+            'HDFC Bank':          'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/HDFC_Bank_Logo.svg/100px-HDFC_Bank_Logo.svg.png',
+            'ICICI Bank':         'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/ICICI_Bank_Logo.svg/100px-ICICI_Bank_Logo.svg.png',
+            'Punjab National Bank':'https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Punjab_National_Bank_Logo.svg/100px-Punjab_National_Bank_Logo.svg.png',
+            'Bank of Baroda':     'https://upload.wikimedia.org/wikipedia/en/thumb/6/68/Bank_of_Baroda_logo.svg/100px-Bank_of_Baroda_logo.svg.png',
+        };
+
+        // Color palette for banks without logos
+        const BANK_COLORS = ['#1e40af','#0f766e','#9333ea','#c2410c','#be123c','#4338ca','#0369a1','#15803d'];
+
         // Load available forms
         async function loadForms() {
             try {
@@ -1217,34 +1353,67 @@
                 const formsList = document.getElementById('formsList');
                 formsList.innerHTML = '';
 
-                banks.forEach(bank => {
+                banks.forEach((bank, idx) => {
                     const bankGroup = document.createElement('div');
                     bankGroup.className = 'bank-group';
                     
                     const initials = bank.bank.split(' ').map(w => w[0]).join('').substring(0, 2);
+                    const logoUrl = BANK_LOGOS[bank.bank];
+                    const bgColor = BANK_COLORS[idx % BANK_COLORS.length];
+                    const formCount = bank.forms.length;
+                    const formWord = formCount === 1 ? 'form' : 'forms';
+
+                    const logoHtml = logoUrl
+                        ? `<img class="bank-logo" src="${logoUrl}" alt="${bank.bank}" onerror="this.outerHTML='<div class=\'bank-logo-fallback\' style=\'background:${bgColor}\'>${initials}</div>'">`
+                        : `<div class="bank-logo-fallback" style="background:${bgColor}">${initials}</div>`;
                     
                     bankGroup.innerHTML = `
-                        <div class="bank-header">
-                            <div class="bank-icon">${initials}</div>
-                            <span class="bank-name">${bank.bank}</span>
+                        <div class="bank-header" onclick="toggleBank(this)">
+                            ${logoHtml}
+                            <div class="bank-info">
+                                <div class="bank-name">${bank.bank}</div>
+                                <div class="bank-form-count">${formCount} ${formWord} available</div>
+                            </div>
+                            <i class="fas fa-chevron-down bank-chevron"></i>
                         </div>
                         <div class="form-list">
+                            <div class="form-list-inner">
                             ${bank.forms.map(form => `
-                                <div class="form-item" onclick="selectForm('${form.form_name}', '${bank.bank}')">
-                                    <i class="fas fa-file-alt"></i>
+                                <div class="form-item" onclick="event.stopPropagation(); selectForm('${form.form_name}', '${bank.bank}')">
+                                    <div class="form-icon"><i class="fas fa-file-alt"></i></div>
                                     <div class="form-info">
                                         <div class="form-name">${form.form_name}</div>
                                         <div class="form-desc">${form.description || 'Bank form'}</div>
                                     </div>
                                 </div>
                             `).join('')}
+                            </div>
                         </div>
                     `;
                     
                     formsList.appendChild(bankGroup);
                 });
+
+                // Auto-expand first bank
+                const firstHeader = formsList.querySelector('.bank-header');
+                if (firstHeader) toggleBank(firstHeader);
+
             } catch (error) {
                 console.error('Failed to load forms:', error);
+            }
+        }
+
+        function toggleBank(headerEl) {
+            const wasOpen = headerEl.classList.contains('open');
+            // Collapse all
+            document.querySelectorAll('.bank-header.open').forEach(h => {
+                h.classList.remove('open');
+                h.nextElementSibling.classList.remove('open');
+            });
+            // Toggle clicked (accordion behavior)
+            if (!wasOpen) {
+                headerEl.classList.add('open');
+                headerEl.nextElementSibling.classList.add('open');
             }
         }
 
@@ -1264,8 +1433,8 @@
                         <div class="welcome-icon">
                             <i class="fas fa-comments"></i>
                         </div>
-                        <h2>Welcome to BankBuddy!</h2>
-                        <p>Select a form from the sidebar to get started, or simply tell me what you need help with.</p>
+                        <h2>Welcome to Bank Form Assistant</h2>
+                        <p>Pick a form from the sidebar, or just describe what you need — I'll find the right form and walk you through it.</p>
                     </div>
                 `;
                 

@@ -41,7 +41,7 @@ RULES:
 
 4. UNDERSTAND INTENT: Map natural language to the right fields. "through cheque" means the payment mode is Cheque. "cash deposit" means Cash. Infer, don't ask.
 
-5. USE CONTEXT: The [Context] block shows what's filled and what's still needed. Never re-ask for filled fields. Ensure to continue the conversation in the same language the user is using.
+5. USE CONTEXT: The [Context] block shows what's filled and what's still needed. Never re-ask for filled fields. Check which language is being used in conversation and ensure to continue the conversation in the same language the user is using.
 
 RESPOND WITH JSON ONLY:
 {{
@@ -188,6 +188,7 @@ YOUR JOB:
 - If unclear, ask clarifying questions
 - If they want a form you don't have, politely explain what IS available
 - If user wants to end the conversation, say goodbye
+- Respond in the same language the user is using
 
 RESPOND WITH JSON ONLY:
 {{

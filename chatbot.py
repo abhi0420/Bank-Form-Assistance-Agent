@@ -11,17 +11,38 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = "gpt-4o-mini"
 
 
+def is_field_visible(field, filled_values):
+    """Check if a field should be shown based on its show_when condition."""
+    show_when = field.get("show_when")
+    if not show_when:
+        return True  # No condition — always visible
+    parent_field = show_when.get("field")
+    expected_value = show_when.get("equals")
+    actual_value = filled_values.get(parent_field, "")
+    return actual_value == expected_value
+
+
 def build_system_prompt(form_fields, filled_values=None):
     """Build system prompt dynamically based on form fields."""
     filled_values = filled_values or {}
     
-    # Build field list
+    # Build field list (filter by show_when visibility and copy_from)
     fields_list = []
     for field in form_fields:
         field_name = field.get("field")
         if field.get("value") or filled_values.get(field_name):
             continue
+        # Skip copy_from fields — they auto-inherit from the source field
+        if field.get("copy_from"):
+            continue
+        # Skip fields whose show_when condition is not met
+        if not is_field_visible(field, filled_values):
+            continue
         desc = field.get("description", "")
+        # For radio fields, list the valid options
+        if field.get("type") == "radio":
+            options = list(field.get("options", {}).keys())
+            desc += f" (Options: {', '.join(options)})"
         fields_list.append(f"- {field_name}: {desc}")
     
     fields_str = "\n".join(fields_list) if fields_list else "All fields are filled!"
@@ -72,9 +93,19 @@ class FormAssistant:
                 self.field_values[field.get("field")] = value
     
     def get_unfilled_fields(self):
-        """Get list of fields still needing values."""
-        all_fields = [f.get("field") for f in self.form_fields]
-        return [f for f in all_fields if not self.field_values.get(f)]
+        """Get list of fields still needing values (respects show_when and copy_from)."""
+        unfilled = []
+        for f in self.form_fields:
+            field_name = f.get("field")
+            if self.field_values.get(field_name):
+                continue
+            # copy_from fields auto-inherit — never count as unfilled
+            if f.get("copy_from"):
+                continue
+            if not is_field_visible(f, self.field_values):
+                continue
+            unfilled.append(field_name)
+        return unfilled
     
     def chat(self, user_input):
         """Send message and get response."""
@@ -114,6 +145,8 @@ class FormAssistant:
             for field, value in result.get("extracted_fields", {}).items():
                 if value:
                     self.field_values[field] = value
+            # Rebuild prompt so show_when conditions are re-evaluated
+            self.system_prompt = build_system_prompt(self.form_fields, self.field_values)
             result["missing_fields"] = self.get_unfilled_fields()
             return result
         except json.JSONDecodeError:

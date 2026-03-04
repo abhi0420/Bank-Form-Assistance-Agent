@@ -51,6 +51,17 @@ def create_text_overlay(fields, page_width, page_height, pdf_settings=None):
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=(page_width, page_height))
     
+    # Build a lookup of all field values for show_when evaluation
+    all_values = {f.get("field"): f.get("value", "") for f in fields}
+    
+    # Resolve copy_from: inherit value from the source field
+    for field in fields:
+        copy_src = field.get("copy_from")
+        if copy_src and not field.get("value"):
+            field["value"] = all_values.get(copy_src, "")
+            if field["value"]:
+                print(f"copy_from: '{field.get('field')}' ← '{copy_src}' = '{field['value']}'")
+    
     for field in fields:
         field_name = field.get("field")
         start = field.get("start")
@@ -59,6 +70,31 @@ def create_text_overlay(fields, page_width, page_height, pdf_settings=None):
         font_size = field.get("font_size", global_size)
         is_bold = field.get("bold", global_bold)
         field_type = field.get("type", "text")
+        
+        # Skip fields whose show_when condition is not met
+        show_when = field.get("show_when")
+        if show_when:
+            parent_val = all_values.get(show_when.get("field"), "")
+            if parent_val != show_when.get("equals"):
+                print(f"Skipping '{field_name}' — show_when condition not met")
+                continue
+        
+        # Handle radio type: draw tick at the selected option's coordinates
+        if field_type == "radio" and value:
+            options = field.get("options", {})
+            selected = options.get(value)
+            if selected and "tick" in selected:
+                tx, ty = selected["tick"]
+                pdf_ty = page_height - ty
+                tick_size = field.get("font_size", global_size)
+                can.setFont(resolve_font_name(global_family, True), tick_size)
+                can.setFillColorRGB(*global_color)
+                tick_char = field.get("tick_char", "X")
+                print(f"Filling radio '{field_name}' = '{value}' with '{tick_char}' at ({tx}, {pdf_ty})")
+                can.drawString(tx, pdf_ty, tick_char)
+            else:
+                print(f"Skipping radio '{field_name}' — option '{value}' not found in options")
+            continue
         
         if start and value:
             x, y = start[0], start[1]

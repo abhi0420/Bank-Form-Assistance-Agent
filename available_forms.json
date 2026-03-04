@@ -8,8 +8,14 @@
                 "aliases": ["deposit slip", "deposit form", "pay in form"],
                 "pdf_path": "forms/Pay-in-Slip.pdf",
                 "coordinates_file": "field_coordinates.json"
+            },
+            {
+                "form_name": "Post Office Aadhar Linking Form",
+                "description": "Link Aadhar with Post Office account",
+                "aliases": ["post office aadhar", "po aadhar linking", "post office uid", "po aadhar form"],
+                "pdf_path": "forms/PO_Aadhar_link_form.pdf",
+                "coordinates_file": "field_coordinates.json"
             }
-            
         ]
     },
     {

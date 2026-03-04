@@ -12,7 +12,7 @@
         "description": "Date of the transaction",
         "start": [160, 67],
         "end": [295, 67],
-        "value": "16022026",
+        "value": "",
         "spacing": 18.5,
         "font_size": 10
     },
@@ -61,10 +61,10 @@
     },
     {
         "field": "Date_2",
-        "description": "Date of the transaction (duplicate field)",
+        "copy_from": "Date",
         "start": [40, 177],
         "end": [80, 177],
-        "value": "16-02-2026",
+        "value": "",
         "font_size": 9
     },
     {
@@ -131,7 +131,7 @@
     },
     {
         "field": "Branch Name_2",
-        "description": "Name of the bank branch (duplicate field)",
+        "copy_from": "Branch Name",
         "start": [147, 270],
         "end": [250, 270],
         "value": "",
@@ -165,13 +165,99 @@
     },
     {
         "field": "Name below Signature",
-        "description": "Name of the account holder below the signature (Same as the name field)",
+        "copy_from": "Name",
         "start": [110, 536],
         "end": [220, 536],
         "value": "",
         "font_size": 10
     }
     ]
+},
+{
+    "form_name": "Post Office Aadhar Linking Form",
+    "bank": "Post Office", 
+    "description": "Link Aadhar with Post Office account",
+    "pdf_path": "forms/PO_Aadhar_link_form.pdf",
+    "form_fields":[
+        {
+        "field" : "Post Office Branch No.",
+        "description": "Number of the Post Office branch",
+        "start": [50, 101],
+        "end": [125, 100],
+        "value": "",
+        "font_size": 10
+        },
+        {
+        "field": "Date",
+        "description": "Date of the letter",
+        "start": [460, 90],
+        "end": [510, 90],  
+        "value": "",
+        "font_size": 10
+         },
+        {
+            "field": "Account Number",
+            "description": "Number of the account",
+            "start": [125, 125],
+            "end": [210, 125],
+            "value": "",
+            "font_size": 10
+         
+        },
+        {
+            "field": "Name",
+            "description": "Name of the account holder",
+            "start": [275, 125],
+            "end": [360, 125],
+            "value": "",
+            "font_size": 10
+         
+         },
+         {
+            "field": "Aadhar Number",
+            "description": "Aadhar number of the account holder",
+            "start": [125, 175],
+            "end": [210, 175],
+            "value": "",
+            "font_size": 10
+        },
+       {
+            "field": "DBT Option",
+            "type": "radio",
+            "description": "How to receive DBT benefits",
+            "options": {
+                "New NPCI Seeding":           { "tick": [95, 320] },
+                "Change NPCI to Post Office": { "tick": [95, 375] }
+            },
+            "value": ""
+        },
+        {
+            "field": "NPCI Account No",
+            "description": "Account number to send to NPCI Mapper (for new seeding)",
+            "show_when": { "field": "DBT Option", "equals": "New NPCI Seeding" },
+            "start": [245, 310],
+            "end": [330, 310],
+            "value": "",
+            "font_size": 10
+        },
+        {
+            "field": "Existing PO Name",
+            "description": "Name of the Post Office where you already have a seeded account",
+            "show_when": { "field": "DBT Option", "equals": "Change NPCI to Post Office" },
+            "start": [225, 370],
+            "end": [325, 370],
+            "value": "",
+            "font_size": 10
+        },
+        {
+            "field": "Existing IIN Number",
+            "description": "IIN number of the existing Post Office account",
+            "show_when": { "field": "DBT Option", "equals": "Change NPCI to Post Office" },
+            "start": [110, 380],
+            "end": [155, 380],
+            "value": "",
+            "font_size": 8
+        }
+    ]
 }
-
 ]

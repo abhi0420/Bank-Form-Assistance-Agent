@@ -1,11 +1,15 @@
 # 🏦 Bank Form Assistant
 
-An AI-powered web application that helps users fill bank forms through natural conversation. Just tell it what you need — it finds the right form, asks the right questions, and generates a filled PDF ready to print.
+<p align="center">
+  <strong>An AI-powered conversational agent that helps you fill bank forms through natural chat — no more confusing paperwork.</strong>
+</p>
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-3.0+-000000?logo=flask)
-![OpenAI](https://img.shields.io/badge/GPT--4o--mini-412991?logo=openai&logoColor=white)
-![Whisper](https://img.shields.io/badge/Whisper-Local_STT-green?logo=openai&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Flask-3.0+-000000?logo=flask&logoColor=white" alt="Flask">
+  <img src="https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai&logoColor=white" alt="OpenAI">
+  <img src="https://img.shields.io/badge/Whisper-Local_STT-green?logo=openai&logoColor=white" alt="Whisper">
+</p>
 
 ---
 
@@ -22,7 +26,24 @@ An AI-powered web application that helps users fill bank forms through natural c
 
 ---
 
-## 🗂️ Project Structure
+## � Screenshots
+
+<table>
+  <tr>
+    <td align="center"><strong>🏠 Initial Screen</strong></td>
+    <td align="center"><strong>💬 Chatbot Conversation</strong></td>
+    <td align="center"><strong>📋 Info Summary</strong></td>
+  </tr>
+  <tr>
+    <td><img src="static/Initial%20screen.png" alt="Initial Screen" width="350"></td>
+    <td><img src="static/Convo%20with%20chatbot.png" alt="Chatbot Conversation" width="350"></td>
+    <td><img src="static/Summary%20of%20info.png" alt="Summary of Info" width="350"></td>
+  </tr>
+</table>
+
+---
+
+## �🗂️ Project Structure
 
 ```
 Bank-Form-Assistance-Agent/
@@ -36,11 +57,16 @@ Bank-Form-Assistance-Agent/
 ├── requirements.txt          # Python dependencies
 ├── .env                      # OpenAI API key (not committed)
 ├── static/
-│   └── post_office_logo.png  # Bank logos
+│   ├── sbi_logo.png              # SBI logo
+│   ├── post_office_logo.png      # Post Office logo
+│   ├── Initial screen.png        # Screenshot — home screen
+│   ├── Convo with chatbot.png    # Screenshot — chat in action
+│   └── Summary of info.png       # Screenshot — field summary
 ├── templates/
-│   └── index.html            # Full web UI (sidebar, chat, settings)
+│   └── index.html                # Full web UI (sidebar, chat, settings)
 └── forms/
-    ├── Pay-in-Slip.pdf               # Post Office deposit form
+    ├── Pay-in-Slip.pdf               # Post Office deposit slip
+    ├── PO_Aadhar_link_form.pdf       # Post Office Aadhar linking form
     └── UID_Aadhar_linking_letter.pdf  # SBI Aadhar linking form
 ```
 
@@ -151,6 +177,7 @@ User: "Account number is 12345678, credit to Raj Kumar"
 | Bank | Form | Description |
 |------|------|-------------|
 | Post Office | Pay-in-Slip | Deposit money into post office savings account |
+| Post Office | Aadhar Linking Form | Link Aadhar with Post Office account |
 | State Bank of India | Aadhar Linking Form | Link Aadhar card with bank account |
 
 ---
@@ -236,3 +263,9 @@ User: "Account number is 12345678, credit to Raj Kumar"
 ## 📝 License
 
 This project is for educational and personal use.
+
+---
+
+<p align="center">
+  Made with ❤️ for hassle-free banking
+</p>

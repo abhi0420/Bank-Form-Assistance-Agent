@@ -55,12 +55,14 @@
             padding: 22px 24px;
             border-bottom: 1px solid var(--border);
             background: var(--surface);
+            overflow: visible;
         }
 
         .logo {
             display: flex;
             align-items: center;
             gap: 10px;
+            overflow: visible;
         }
 
         .logo-icon {
@@ -76,18 +78,21 @@
         }
 
         .logo-text {
-            font-size: 1.35rem;
+            font-size: 1.1rem;
             font-weight: 700;
             background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 50%, #6366f1 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             letter-spacing: -0.02em;
+            white-space: nowrap;
+            flex-shrink: 0;
+            width: max-content;
+            display: block;
         }
 
         .logo-text span {
-            font-weight: 400;
-            opacity: 0.7;
+            font-weight: 700;
         }
 
         .sidebar-content {
@@ -1333,7 +1338,7 @@
 
         // Bank logo URLs (add more as needed)
         const BANK_LOGOS = {
-            'State Bank of India': 'https://upload.wikimedia.org/wikipedia/en/thumb/5/58/State_Bank_of_India_logo.svg/74px-State_Bank_of_India_logo.svg.png',
+            'State Bank of India': '/static/sbi_logo.png',
             'Post Office':        '/static/post_office_logo.png',
             'HDFC Bank':          'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/HDFC_Bank_Logo.svg/100px-HDFC_Bank_Logo.svg.png',
             'ICICI Bank':         'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/ICICI_Bank_Logo.svg/100px-ICICI_Bank_Logo.svg.png',

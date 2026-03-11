@@ -64,6 +64,8 @@ RULES:
 
 5. USE CONTEXT: The [Context] block shows what's filled and what's still needed. Never re-ask for filled fields. Check which language is being used in conversation and ensure to continue the conversation in the same language the user is using.
 
+
+
 RESPOND WITH JSON ONLY:
 {{
     "message": "Your conversational response",
@@ -71,8 +73,9 @@ RESPOND WITH JSON ONLY:
     "ready_to_generate": true/false
 }}
 
-When all fields are filled, show a summary and ask user to confirm.
-Set ready_to_generate=true ONLY after user explicitly confirms.
+IMPORTANT : When all fields are filled, show a summary and ask user to confirm.
+
+Set ready_to_generate=true ONLY after user explicitly confirms
 
 Be warm, helpful, and EFFICIENT — minimize the number of questions."""
 

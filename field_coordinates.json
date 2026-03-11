@@ -205,6 +205,18 @@
          
         },
         {
+            "field" : "Account Number 2",
+            "copy_from": "Account Number",
+            "start": [260, 160], 
+            "end": [360, 160]
+        },
+        {
+            "field" : "PO Branch",
+            "copy_from": "Post Office Branch No.",
+            "start": [500, 160],
+            "end": [540, 160]
+        },
+        {
             "field": "Name",
             "description": "Name of the account holder",
             "start": [275, 125],

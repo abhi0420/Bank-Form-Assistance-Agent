@@ -109,11 +109,32 @@ def select_form():
     # Generate initial message (skip pre-filled fields)
     system_prompt = build_form_filling_prompt(form_fields, session["field_values"])
     
+    # Build initial context with unfilled fields (same filtering as handle_filling_chat)
+    copy_from_fields = {f.get("field") for f in form_fields if f.get("copy_from")}
+    init_unfilled = []
+    for f in form_fields:
+        fn = f.get("field")
+        if session["field_values"].get(fn):
+            continue
+        if fn in copy_from_fields:
+            continue
+        show_when = f.get("show_when")
+        if show_when:
+            parent_val = session["field_values"].get(show_when.get("field"), "")
+            if parent_val != show_when.get("equals"):
+                continue
+        init_unfilled.append(fn)
+    
+    visible_filled = {k: v for k, v in session['field_values'].items() if k not in copy_from_fields}
+    today = datetime.now().strftime("%d%m%Y")
+    init_context = f"\n\n[Context: Today={today}. Filled={visible_filled}. Still needed={init_unfilled}]"
+    init_user_msg = f"I want to fill the {form_name} form. What information do you need?" + init_context
+    
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"I want to fill the {form_name} form. What information do you need?"}
+            {"role": "user", "content": init_user_msg}
         ],
         response_format={"type": "json_object"},
         temperature=0.4
@@ -123,7 +144,7 @@ def select_form():
     
     session["conversation_history"].append({
         "role": "user",
-        "content": f"I want to fill the {form_name} form. What information do you need?"
+        "content": init_user_msg
     })
     session["conversation_history"].append({
         "role": "assistant",
@@ -224,12 +245,30 @@ def handle_filling_chat(session, user_message):
     form_fields = session["form_fields"]
     field_values = session["field_values"]
     
-    # Get unfilled fields
-    all_fields = [f.get("field") for f in form_fields]
-    unfilled = [f for f in all_fields if not field_values.get(f)]
+    # Build set of copy_from field names — these are invisible to the LLM
+    copy_from_fields = {f.get("field") for f in form_fields if f.get("copy_from")}
+    
+    # Get unfilled fields (skip copy_from and hidden show_when fields)
+    unfilled = []
+    for f in form_fields:
+        field_name = f.get("field")
+        if field_values.get(field_name):
+            continue
+        if field_name in copy_from_fields:
+            continue
+        # Skip fields whose show_when condition is not met
+        show_when = f.get("show_when")
+        if show_when:
+            parent_val = field_values.get(show_when.get("field"), "")
+            if parent_val != show_when.get("equals"):
+                continue
+        unfilled.append(field_name)
+    
+    # Filter Filled dict to exclude copy_from fields so LLM never sees those names
+    visible_filled = {k: v for k, v in field_values.items() if k not in copy_from_fields}
     
     today = datetime.now().strftime("%d%m%Y")
-    context = f"\n\n[Context: Today={today}. Filled={field_values}. Still needed={unfilled}]"
+    context = f"\n\n[Context: Today={today}. Filled={visible_filled}. Still needed={unfilled}]"
     
     session["conversation_history"].append({
         "role": "user",
@@ -257,9 +296,9 @@ def handle_filling_chat(session, user_message):
     
     result = json.loads(assistant_msg)
     
-    # Update field values
+    # Update field values (ignore copy_from fields — they are auto-filled at PDF generation)
     for field, value in result.get("extracted_fields", {}).items():
-        if value:
+        if value and field not in copy_from_fields:
             session["field_values"][field] = value
     
     response_data = {

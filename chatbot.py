@@ -54,15 +54,17 @@ FIELDS STILL NEEDED:
 
 RULES:
 
-1. EXTRACT AGGRESSIVELY: When the user sends a message, extract EVERY field you can from it. A single message often contains multiple field values — get them all.
+1. ONLY ASK FOR FIELDS LISTED ABOVE: The FIELDS STILL NEEDED list is the ONLY set of fields you should ask about. Do NOT ask for any field not in that list. Some fields are auto-filled from other fields or only appear conditionally — ignore them completely.
 
-2. BE SMART ABOUT RELATED FIELDS: If you can compute or infer a field from information you already have, fill it yourself. Never ask the user for something you can figure out, or for duplicate fields. For ex, if you have amount in number, you can convert it to words. 
+2. EXTRACT AGGRESSIVELY: When the user sends a message, extract EVERY field you can from it. A single message often contains multiple field values — get them all.
 
-3. ASK EFFICIENTLY: Request all remaining unfilled fields together in one question. Don't ask one field at a time. Only if you feel the user has given wrong/conflicting info, ask for clarification on that specific point. 
+3. BE SMART ABOUT RELATED FIELDS: If you can compute or infer a field from information you already have, fill it yourself. Never ask the user for something you can figure out, or for duplicate fields. For ex, if you have amount in number, you can convert it to words. 
 
-4. UNDERSTAND INTENT: Map natural language to the right fields. "through cheque" means the payment mode is Cheque. "cash deposit" means Cash. Infer, don't ask.
+4. ASK EFFICIENTLY: Request all remaining unfilled fields together in one question. Don't ask one field at a time. Only if you feel the user has given wrong/conflicting info, ask for clarification on that specific point. 
 
-5. USE CONTEXT: The [Context] block shows what's filled and what's still needed. Never re-ask for filled fields. Check which language is being used in conversation and ensure to continue the conversation in the same language the user is using.
+5. UNDERSTAND INTENT: Map natural language to the right fields. "through cheque" means the payment mode is Cheque. "cash deposit" means Cash. Infer, don't ask.
+
+6. USE CONTEXT: The [Context] block shows what's filled and what's still needed. ONLY ask for fields in the "Still needed" list. Never re-ask for filled fields. Check which language is being used in conversation and ensure to continue the conversation in the same language the user is using.
 
 
 
@@ -86,6 +88,9 @@ class FormAssistant:
         self.field_values = {}
         self.conversation_history = []
         
+        # Build set of copy_from field names — invisible to the LLM
+        self.copy_from_fields = {f.get("field") for f in form_fields if f.get("copy_from")}
+        
         # Build system prompt dynamically from form fields
         self.system_prompt = build_system_prompt(form_fields)
         
@@ -102,8 +107,7 @@ class FormAssistant:
             field_name = f.get("field")
             if self.field_values.get(field_name):
                 continue
-            # copy_from fields auto-inherit — never count as unfilled
-            if f.get("copy_from"):
+            if field_name in self.copy_from_fields:
                 continue
             if not is_field_visible(f, self.field_values):
                 continue
@@ -117,8 +121,10 @@ class FormAssistant:
         unfilled = self.get_unfilled_fields()
         today = datetime.now().strftime("%d%m%Y")
         
-        # Context helps model track state reliably + conversation history provides understanding of user
-        context = f"\n\n[Context: Today={today}. Filled={self.field_values}. Still needed={unfilled}]"
+        # Filter Filled dict — copy_from fields are invisible to the model
+        visible_filled = {k: v for k, v in self.field_values.items() if k not in self.copy_from_fields}
+        
+        context = f"\n\n[Context: Today={today}. Filled={visible_filled}. Still needed={unfilled}]"
         
         self.conversation_history.append({
             "role": "user", 
@@ -142,11 +148,11 @@ class FormAssistant:
             "content": assistant_msg
         })
         
-        # Parse response and update field values
+        # Parse response and update field values (ignore copy_from fields)
         try:
             result = json.loads(assistant_msg)
             for field, value in result.get("extracted_fields", {}).items():
-                if value:
+                if value and field not in self.copy_from_fields:
                     self.field_values[field] = value
             # Rebuild prompt so show_when conditions are re-evaluated
             self.system_prompt = build_system_prompt(self.form_fields, self.field_values)
@@ -178,8 +184,12 @@ def load_available_forms(json_path="available_forms.json"):
 
 def load_form_coordinates(json_path):
     """Load detailed form coordinates from JSON."""
-    with open(json_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON parse error in '{json_path}': {e}")
+        return []
 
 
 def get_all_forms_flat(available_forms):

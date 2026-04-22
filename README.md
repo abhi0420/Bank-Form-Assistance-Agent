@@ -24,7 +24,6 @@
 - **📐 Multiline Fields** — Fields like addresses automatically word-wrap within bounding boxes with configurable line spacing.
 - **🏦 Multi-Bank Support** — Organized sidebar with bank logos, collapsible dropdowns, and per-bank form listings.
 
----
 
 ## � Screenshots
 
@@ -64,10 +63,13 @@ Bank-Form-Assistance-Agent/
 │   └── Summary of info.png       # Screenshot — field summary
 ├── templates/
 │   └── index.html                # Full web UI (sidebar, chat, settings)
-└── forms/
-    ├── Pay-in-Slip.pdf               # Post Office deposit slip
-    ├── PO_Aadhar_link_form.pdf       # Post Office Aadhar linking form
-    └── UID_Aadhar_linking_letter.pdf  # SBI Aadhar linking form
+├── forms/
+│   ├── Pay-in-Slip.pdf               # Post Office deposit slip
+│   ├── PO_Aadhar_link_form.pdf       # Post Office Aadhar linking form
+│   └── UID_Aadhar_linking_letter.pdf  # SBI Aadhar linking form
+└── form_detection/                   # Research — see [form_detection/README.md](form_detection/README.md)
+    ├── layoutlm.ipynb                # LayoutLMv3 + YOLOv8 training & inference pipeline
+    └── layoutlmv3-question-detector/ # Saved processor config & tokenizer (no weights)
 ```
 
 ---
@@ -247,6 +249,12 @@ User: "Account number is 12345678, credit to Raj Kumar"
 
 ---
 
+## ⚠️ Current Limitation — Supported Forms Only
+
+The assistant currently works only with forms that have been manually mapped (field names to PDF coordinates). See [`form_detection/`](form_detection/README.md) for an experimental pipeline exploring automatic field detection — contributions to extend it are welcome.
+
+---
+
 ## ⚙️ Configuration
 
 | Setting | Location | Default |
@@ -266,6 +274,4 @@ This project is for educational and personal use.
 
 ---
 
-<p align="center">
-  Made with ❤️ for hassle-free banking
-</p>
+

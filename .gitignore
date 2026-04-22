@@ -9,3 +9,7 @@ forms/*_with_coordinates*.pdf
 forms/
 # Temp files
 *.tmp
+
+# form_detection — trained model weights (not shared, retrain using the notebook)
+form_detection/best.pt
+form_detection/layoutlmv3-question-detector/model.safetensors
